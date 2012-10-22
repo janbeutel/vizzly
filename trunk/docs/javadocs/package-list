@@ -1,0 +1,9 @@
+ch.ethz.vizzly
+ch.ethz.vizzly.cache
+ch.ethz.vizzly.cache.memory
+ch.ethz.vizzly.cache.mysql
+ch.ethz.vizzly.datareader
+ch.ethz.vizzly.datareader.gsn
+ch.ethz.vizzly.datatype
+ch.ethz.vizzly.performance
+ch.ethz.vizzly.util
