@@ -36,6 +36,13 @@
 			<classes dir="build"/>
 		</war>
 	</target>
+	<target name="war-jetty-filters" depends="compile">
+		<war destfile="dist/vizzly.war" webxml="jetty-runtime/vizzly/jetty-filters.xml">
+			<fileset dir="web"/>
+			<lib dir="lib"/>
+			<classes dir="build"/>
+		</war>
+	</target>
 	<target name="deploy">
         <mkdir dir="${deploy.classes}"/>
         <copy todir="${deploy.classes}">
