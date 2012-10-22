@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" type="text/css" href="vizzly.css" />
+    <link rel="stylesheet" type="text/css" href="extlib/jquery-ui-1.8.20.custom.css" />
+    <style type="text/css">
+    <!--
+    body { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
+    h1 { font-family: Verdana, Helvetica, sans-serif; font-size:16px; }
+    -->
+    </style>
+    <!--[if IE]><script src="extlib/excanvas.js"></script><![endif]-->
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <script type='text/javascript' src='extlib/jquery-1.7.2.min.js'></script>
+    <script type='text/javascript' src='extlib/jquery-ui-1.8.20.custom.min.js'></script>
+    <script type='text/javascript' src='extlib/jquery.ui.touch-punch.min.js'></script>
+    <script type='text/javascript' src='extlib/dygraph-combined.js'></script>
+    <script type='text/javascript' src='vizzly.js'></script>
+    <script type='text/javascript'>
+    var g1Config = null;
+    
+    function init() {
+        g1Config = {
+            "graph": {
+                "div": "g1_div",
+                "type": "dygraph",
+                "width": 600,
+                "height": 250,
+                "showForm": false
+            },
+            "appUrl": "vizzly?",
+            "imageUrl" : "./images/",
+            "signals": {
+                "y1": [
+                {
+                    "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
+					"displayName": "Ozone [ppb]",
+					"dataField": "ozone_ppb",
+                    "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
+					"timeField": "generation_time",
+	                "scaling": 1.0,
+                    "visible": true,
+					"thresholds": [ 18.0, 8.0 ]
+                }
+	            ]
+            }
+        };
+        //var g1 = new FrontendCreator(g1Config);
+        var aggMap = new AggregationMap(g1Config, document.getElementById("map_canvas"));
+
+   
+    }
+    </script>
+    <title>Map Test</title>
+  </head>
+
+  <body onLoad="init();">
+    <div id="map_canvas" style="width:100%; height:100%"></div>
+  </body>
+</html>

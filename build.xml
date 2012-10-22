@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<project name="vizzly" default="compile" basedir=".">
+    <!-- Paths for build outputs -->
+    <property name="build" location="./build"/>
+    <property name="deploy.classes" location="./webapp/WEB-INF/classes"/>
+    <!-- Paths for sources -->
+    <property name="src" location="./src"/>
+    <!-- User properties -->
+    <property file="build.properties"/>
+    <!-- Clean build output -->
+    <target name="clean">
+        <delete dir="${build}"/>
+        <delete dir="${deploy.classes}"/>
+    </target>
+    <!-- Create build output directories -->
+    <target name="create-dirs">
+        <mkdir dir="${build}"/>
+    </target>
+    <target name="compile" depends="create-dirs">
+        <javac srcdir="${src}" destdir="${build}">
+            <classpath>
+                <pathelement location="${icu4j.jar}"/>
+                <pathelement location="${servlet-api.jar}"/>
+                <pathelement location="${mysql-connector-java.jar}"/>
+                <pathelement location="${gson.jar}"/>
+                <pathelement location="${log4j.jar}"/>
+            </classpath>
+        </javac>
+        <!--<jar destfile="${build}/vizzly.jar"
+         basedir="${build.class.main}"/>-->
+    </target>
+    <target name="war" depends="compile">
+		<war destfile="dist/vizzly.war" webxml="web/WEB-INF/web.xml">
+			<fileset dir="web"/>
+			<lib dir="lib"/>
+			<classes dir="build"/>
+		</war>
+	</target>
+	<target name="war-jetty" depends="compile">
+		<war destfile="dist/vizzly.war" webxml="web/WEB-INF/web-jetty.xml">
+			<fileset dir="web"/>
+			<lib dir="lib"/>
+			<classes dir="build"/>
+		</war>
+	</target>
+	<target name="deploy">
+        <mkdir dir="${deploy.classes}"/>
+        <copy todir="${deploy.classes}">
+            <fileset dir="${build}">
+                <!--<exclude name="**/*.java"/>-->
+            </fileset>
+        </copy>
+    </target>
+    <target name="generate-doc">
+	  <javadoc packagenames="ch.ethz.vizzly.*"
+	           sourcepath="${src}"
+	           defaultexcludes="yes"
+	           destdir="docs/javadocs"
+	           author="true"
+	           version="true"
+	           use="true"
+	           windowtitle="Vizzly">
+	    <doctitle><![CDATA[<h1>Vizzly</h1>]]></doctitle>
+	    <bottom><![CDATA[<i>Copyright &#169; 2012 ETH Zurich, Computer Engineering and Networks Laboratory.</i>]]></bottom>
+	    <link href="http://developer.java.sun.com/developer/products/xml/docs/api/"/>
+	  </javadoc>
+	</target>
+</project>
