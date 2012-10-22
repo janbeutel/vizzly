@@ -21,6 +21,7 @@ import java.util.Vector;
 import ch.ethz.vizzly.cache.CacheConfiguration;
 import ch.ethz.vizzly.cache.CacheManager;
 import ch.ethz.vizzly.cache.memory.MemCache;
+import ch.ethz.vizzly.datareader.CsvDataReader;
 import ch.ethz.vizzly.datareader.DataReaderRegistry;
 import ch.ethz.vizzly.datareader.gsn.GsnDataReader;
 import ch.ethz.vizzly.performance.AbstractPerformanceTracker;
@@ -28,7 +29,8 @@ import ch.ethz.vizzly.performance.DummyPerformanceTracker;
 
 /**
  * This class contains all state that is needed to run the application. For example,
- * the memory cache is initialized here.
+ * the memory cache is initialized here. During runtime, this object is stored
+ * in the servlet context.
  * @author Matthias Keller
  *
  */
@@ -67,6 +69,10 @@ public class VizzlyStateContainer {
             // Initialize GSN data source handling
             GsnDataReader gsnDataReader = new GsnDataReader();
             dataReaderRegistry.addDataReader("gsn", gsnDataReader);
+            
+            // Initialize and register CSV file reader
+            CsvDataReader csvDataReader = new CsvDataReader();
+            dataReaderRegistry.addDataReader("csv", csvDataReader);
             
             // Initialize performance tracker
             perfTracker = new DummyPerformanceTracker();
