@@ -18,6 +18,7 @@ package ch.ethz.vizzly;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.servlet.annotation.WebListener;
 
 import org.apache.log4j.Logger;
 
@@ -29,6 +30,7 @@ import ch.ethz.vizzly.cache.CacheUpdateWorkerSynchronization;
  * @author Matthias Keller
  *
  */
+@WebListener 
 public class VizzlyServletContextListener implements ServletContextListener {
 
     private final int NUM_UPDATE_WORKERS = 1;

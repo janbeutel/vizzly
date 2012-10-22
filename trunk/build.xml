@@ -30,14 +30,7 @@
          basedir="${build.class.main}"/>-->
     </target>
     <target name="war" depends="compile">
-		<war destfile="dist/vizzly.war" webxml="web/WEB-INF/web.xml">
-			<fileset dir="web"/>
-			<lib dir="lib"/>
-			<classes dir="build"/>
-		</war>
-	</target>
-	<target name="war-jetty" depends="compile">
-		<war destfile="dist/vizzly.war" webxml="web/WEB-INF/web-jetty.xml">
+		<war destfile="dist/vizzly.war" needxmlfile="false">
 			<fileset dir="web"/>
 			<lib dir="lib"/>
 			<classes dir="build"/>

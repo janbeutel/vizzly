@@ -24,7 +24,6 @@ import ch.ethz.vizzly.cache.memory.MemCache;
 import ch.ethz.vizzly.datareader.DataReaderRegistry;
 import ch.ethz.vizzly.datareader.gsn.GsnDataReader;
 import ch.ethz.vizzly.performance.AbstractPerformanceTracker;
-import ch.ethz.vizzly.performance.DbPerformanceTracker;
 import ch.ethz.vizzly.performance.DummyPerformanceTracker;
 
 /**

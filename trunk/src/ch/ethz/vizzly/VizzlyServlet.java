@@ -25,6 +25,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.annotation.WebServlet;
 
 import org.apache.log4j.Logger;
 
@@ -40,6 +41,7 @@ import com.google.gson.Gson;
  * @author Matthias Keller
  *
  */
+@WebServlet(urlPatterns={"/vizzly"})
 public class VizzlyServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
