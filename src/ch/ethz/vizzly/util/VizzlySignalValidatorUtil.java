@@ -17,6 +17,7 @@
 package ch.ethz.vizzly.util;
 
 import ch.ethz.vizzly.datareader.DataReaderRegistry;
+import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
 
 /**
@@ -27,28 +28,31 @@ import ch.ethz.vizzly.datatype.VizzlySignal;
  */
 public class VizzlySignalValidatorUtil {
 
-    public static boolean validateSignal(VizzlySignal signal, DataReaderRegistry readerRegistry) {
+    public static void validateSignal(VizzlySignal signal, DataReaderRegistry readerRegistry) throws VizzlyInvalidSignalException {
 
-        if(signal.dataSource == null) return false;
-        if(signal.deviceSelect == null) return false;
-        if(signal.dataSource.type == null) return false;
+        if(signal.dataSource == null) throw new VizzlyInvalidSignalException("Could not parse signal: Data source is missing.");
+        if(signal.deviceSelect == null) throw new VizzlyInvalidSignalException("Could not parse signal: Device selection is missing.");
+        if(signal.dataSource.type == null) throw new VizzlyInvalidSignalException("Could not parse signal: Data source spec is incomplete.");
+        if(signal.dataSource.name == null || signal.dataSource.name.equals("")) throw new VizzlyInvalidSignalException("Could not parse signal: Data source spec is incomplete.");
         
-        if(signal.dataField == null || signal.dataField.equals("")) return false;
-        if(signal.timeField == null || signal.timeField.equals("")) return false;
+        if(signal.dataField == null || signal.dataField.equals("")) throw new VizzlyInvalidSignalException("Could not parse signal: dataField is missing.");
+        if(signal.timeField == null || signal.timeField.equals("")) throw new VizzlyInvalidSignalException("Could not parse signal: timeField is missing.");
         
-        if(readerRegistry.getDataReader(signal.dataSource.type) == null) return false;
-        if(!readerRegistry.getDataReader(signal.dataSource.type).validateSignal(signal)) return false;
+        if(readerRegistry.getDataReader(signal.dataSource.type) == null) throw new VizzlyInvalidSignalException("Could not parse signal: Unknown data source type.");
+        // Also throws an exception on error
+        readerRegistry.getDataReader(signal.dataSource.type).validateSignal(signal);
         
-        if(signal.dataSource.name == null || signal.dataSource.name.equals("")) return false;
-        
-        if(signal.deviceSelect.type == null) return false;
-        if(!signal.deviceSelect.type.equals("single") && !signal.deviceSelect.type.equals("all")) return false;
+        if(signal.deviceSelect.type == null) throw new VizzlyInvalidSignalException("Could not parse signal: Device selection is incomplete.");
+        if(!signal.deviceSelect.type.equals("single") && !signal.deviceSelect.type.equals("all")) throw new VizzlyInvalidSignalException("Could not parse signal: Device selection is invalid.");
         if(signal.deviceSelect.type.equals("single")) {
-            if(signal.deviceSelect.field == null || signal.deviceSelect.field.equals("")) return false;
-            if(signal.deviceSelect.value == null || signal.deviceSelect.value.equals("")) return false;
+            if(signal.deviceSelect.field == null || signal.deviceSelect.field.equals("")) throw new VizzlyInvalidSignalException("Could not parse signal: Device selection is incomplete.");
+            if(signal.deviceSelect.value == null || signal.deviceSelect.value.equals("")) throw new VizzlyInvalidSignalException("Could not parse signal: Device selection is incomplete.");
         }
         
-        return true;
+        if(signal.locationLatField != null && signal.locationLngField == null) throw new VizzlyInvalidSignalException("Could not parse signal: Location field spec is incomplete.");
+        if(signal.locationLngField != null && signal.locationLatField == null) throw new VizzlyInvalidSignalException("Could not parse signal: Location field spec is incomplete.");
+        
+        return;
     }
 
 }

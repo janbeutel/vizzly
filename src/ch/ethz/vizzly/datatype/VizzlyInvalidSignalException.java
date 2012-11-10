@@ -16,25 +16,18 @@
 
 package ch.ethz.vizzly.datatype;
 
-import java.util.Vector;
-
 /**
- * This class specifies a view configuration that might once be extended to two Y axes.
+ * This class implements an exception data type that is used for signaling problems
+ * in a signal specification.
  * @author Matthias Keller
  *
  */
-public class VizzlyView {
+public class VizzlyInvalidSignalException extends Exception {
     
-    public Vector<VizzlySignal> signals;
-    
-    public Vector<VizzlySignal> getVisibleSignals() {
-        Vector<VizzlySignal> sig = new Vector<VizzlySignal>();
-        for(VizzlySignal s : signals) {
-            if(s.visible) {
-                sig.add(s);
-            }
-        }
-        return sig;
+    private static final long serialVersionUID = 1L;
+
+    public VizzlyInvalidSignalException(String message) {
+        super(message);
     }
 
 }

@@ -20,6 +20,7 @@ import java.util.Vector;
 
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.TimedLocationValue;
+import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
 
 /**
@@ -29,7 +30,7 @@ import ch.ethz.vizzly.datatype.VizzlySignal;
  */
 public abstract class AbstractDataReader {
 
-    abstract public Boolean validateSignal(VizzlySignal signal);
+    abstract public void validateSignal(VizzlySignal signal) throws VizzlyInvalidSignalException;
     
     /**
      * This function is called for reading data from a data source.

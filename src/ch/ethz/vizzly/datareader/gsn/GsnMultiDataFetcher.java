@@ -52,10 +52,6 @@ public class GsnMultiDataFetcher {
 
     private final Semaphore semaphore = new Semaphore(8);
 
-    private final String LATITUDE_FIELD = "latitude";
-
-    private final String LONGITUDE_FIELD = "longitude";
-
     private ServerSpec serverSpec = null;
 
     /* Used to check if it makes sense to query the GSN server again. */
@@ -83,9 +79,9 @@ public class GsnMultiDataFetcher {
         // Location information
         if(includeLocation) {
             urlStringBuilder.append("&vs[1]=").append(signal.dataSource.name);
-            urlStringBuilder.append("&field[1]=").append(LATITUDE_FIELD);
+            urlStringBuilder.append("&field[1]=").append(signal.locationLatField);
             urlStringBuilder.append("&vs[2]=").append(signal.dataSource.name);
-            urlStringBuilder.append("&field[2]=").append(LONGITUDE_FIELD);
+            urlStringBuilder.append("&field[2]=").append(signal.locationLngField);
         }
 
         SimpleDateFormat dateFormatter = new SimpleDateFormat("dd/MM/yyyy+HH:mm:ss");
@@ -131,7 +127,7 @@ public class GsnMultiDataFetcher {
         }
 
         Boolean includeLocation = false;
-        if(isFieldValid(signal.dataSource.name, LATITUDE_FIELD) && isFieldValid(signal.dataSource.name, LONGITUDE_FIELD)) {
+        if(signal.locationLatField != null) {
             includeLocation = true;
         }
 
@@ -253,7 +249,7 @@ public class GsnMultiDataFetcher {
         return true;
     }
 
-    private Boolean isVirtualSensorValid(String virtualSensor) {
+    public Boolean isVirtualSensorValid(String virtualSensor) {
         if(!structure.getVirtualSensors().contains(virtualSensor)) {
             // Maybe we just need to update our cached information
             if(!tryStructureUpdate()) {
@@ -266,7 +262,7 @@ public class GsnMultiDataFetcher {
         return true;
     }
 
-    private Boolean isFieldValid(String virtualSensor, String field) {
+    public Boolean isFieldValid(String virtualSensor, String field) {
         if(structure.getFields(virtualSensor) == null) {
             return false;
         }

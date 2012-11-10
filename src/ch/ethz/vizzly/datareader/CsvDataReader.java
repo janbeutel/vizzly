@@ -20,6 +20,7 @@ import java.util.Vector;
 
 import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyException;
+import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
 
 /**
@@ -31,9 +32,9 @@ import ch.ethz.vizzly.datatype.VizzlySignal;
 public class CsvDataReader extends AbstractDataReader {
 
     @Override
-    public Boolean validateSignal(VizzlySignal signal) {
+    public void validateSignal(VizzlySignal signal) throws VizzlyInvalidSignalException {
         // TODO Auto-generated method stub
-        return null;
+        return;
     }
 
     @Override

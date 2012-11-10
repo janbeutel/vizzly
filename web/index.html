@@ -30,20 +30,20 @@
             },
             "appUrl": "vizzly?",
             "imageUrl" : "./images/",
-            "signals": {
-                "y1": [
-                {
-                    "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
-					"displayName": "Ozone [ppb]",
-					"dataField": "ozone_ppb",
-                    "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
-					"timeField": "generation_time",
-	                "scaling": 1.0,
-                    "visible": true,
-					"thresholds": [ 18.0, 8.0 ]
-                }
-	            ]
+            "signals": [
+            {
+                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
+				"displayName": "Ozone [ppb]",
+				"dataField": "ozone_ppb",
+                "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
+				"timeField": "generation_time",
+                "scaling": 1.0,
+                "visible": true,
+                "locationLatField": "latitude",
+                "locationLngField": "longitude",
+				"thresholds": [ 18.0, 8.0 ]
             }
+	        ]
         };
         //var g1 = new FrontendCreator(g1Config);
         var aggMap = new AggregationMap(g1Config, document.getElementById("map_canvas"));
