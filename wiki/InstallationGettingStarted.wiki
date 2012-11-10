@@ -1,0 +1,14 @@
+#summary Instructions on how to install and run Vizzly on an own machine.
+
+= Introduction =
+
+Vizzly is a Java EE 6 Web application that can basically be deployed into any Servlet container (Apache Tomcat, JBoss, Jetty, ...). The project repository includes a fully configured runtime that is based on Jetty.
+
+= Using the included Jetty runtime =
+
+We use Ant for building Vizzly. While there is also a target that creates a generic WAR file that can then be deployed anywhere, the Ant target _jetty-deploy_ also adds Jetty-specific configuration parameters (enables GZip compression and disables Cross-Origin checking for testing).
+
+  # Checkout Vizzly from the SVN repository hosted on Google Code
+  # In the main folder, run _ant jetty-deploy_  for building the WAR file that is then deployed in Jetty
+  # Go to _./jetty-runtime_, create your own copy of _start_vizzly.sh_ by copying the provided _start_vizzly.sh.example_
+  # Start Vizzly using _./start_vizzly.sh_
