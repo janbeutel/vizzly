@@ -41,6 +41,9 @@ public class VizzlyServletContextListener implements ServletContextListener {
     private static Logger log = Logger.getLogger(VizzlyServletContextListener.class);
 
     public void contextInitialized(ServletContextEvent sce) {
+        // Enable DNS caching, very useful when GSN data sources are used
+        java.security.Security.setProperty("networkaddress.cache.ttl", "14400");
+  
         // Initialize state object
         VizzlyStateContainer vizzlyState = new VizzlyStateContainer();
         sce.getServletContext().setAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY, vizzlyState);

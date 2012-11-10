@@ -2,19 +2,22 @@
 <project name="vizzly" default="compile" basedir=".">
     <!-- Paths for build outputs -->
     <property name="build" location="./build"/>
-    <property name="deploy.classes" location="./webapp/WEB-INF/classes"/>
+    <property name="dist" location="./dist"/>
+	<property name="deploy.jetty" location="./jetty-runtime/webapps/root.war"/>
     <!-- Paths for sources -->
     <property name="src" location="./src"/>
+    <property name="lib" location="./lib"/>
     <!-- User properties -->
     <property file="build.properties"/>
     <!-- Clean build output -->
     <target name="clean">
         <delete dir="${build}"/>
-        <delete dir="${deploy.classes}"/>
+        <delete dir="${dist}"/>
     </target>
     <!-- Create build output directories -->
     <target name="create-dirs">
         <mkdir dir="${build}"/>
+        <mkdir dir="${dist}"/>
     </target>
     <target name="compile" depends="create-dirs">
         <javac srcdir="${src}" destdir="${build}">
@@ -26,32 +29,23 @@
                 <pathelement location="${log4j.jar}"/>
             </classpath>
         </javac>
-        <!--<jar destfile="${build}/vizzly.jar"
-         basedir="${build.class.main}"/>-->
     </target>
     <target name="war" depends="compile">
-		<war destfile="dist/vizzly.war" needxmlfile="false">
+		<war destfile="${dist}/vizzly.war" needxmlfile="false">
 			<fileset dir="web"/>
-			<lib dir="lib"/>
-			<classes dir="build"/>
+			<lib dir="${lib}"/>
+			<classes dir="${build}"/>
 		</war>
 	</target>
-	<target name="war-jetty-filters" depends="compile">
-		<war destfile="dist/vizzly.war" webxml="jetty-runtime/vizzly/jetty-filters.xml">
+	<target name="jetty-deploy" depends="compile">
+		<war destfile="dist/root-jetty.war" webxml="jetty-runtime/vizzly/jetty-filters.xml">
 			<fileset dir="web"/>
-			<lib dir="lib"/>
-			<classes dir="build"/>
+			<lib dir="${lib}"/>
+			<classes dir="${build}"/>
 		</war>
+		<copy file="${dist}/root-jetty.war" tofile="${deploy.jetty}" />
 	</target>
-	<target name="deploy">
-        <mkdir dir="${deploy.classes}"/>
-        <copy todir="${deploy.classes}">
-            <fileset dir="${build}">
-                <!--<exclude name="**/*.java"/>-->
-            </fileset>
-        </copy>
-    </target>
-    <target name="generate-doc">
+   <target name="generate-doc">
 	  <javadoc packagenames="ch.ethz.vizzly.*"
 	           sourcepath="${src}"
 	           defaultexcludes="yes"

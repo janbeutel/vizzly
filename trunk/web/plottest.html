@@ -25,19 +25,17 @@
                 "showForm": true
             },
             "appUrl": "vizzly?",
-            "signals": {
-                "y1": [
-                {
-                    "dataSource": { "type": "gsn", "serverAddress": "data.permasense.ch", "name": "matterhorn_dozer_nodehealth__conv" },
-					"displayName": "sysvoltage_5",
-					"dataField": "sysvoltage",
-                    "deviceSelect": { "type": "single", "field": "position", "value": 5 },
-					"timeField": "generation_time",
-	                "scaling": 1.0,
-                    "visible": true
-                }
-                ]
+            "signals": [
+            {
+                "dataSource": { "type": "gsn", "serverAddress": "data.permasense.ch", "name": "matterhorn_dozer_nodehealth__conv" },
+				"displayName": "sysvoltage_5",
+				"dataField": "sysvoltage",
+                "deviceSelect": { "type": "single", "field": "position", "value": 5 },
+				"timeField": "generation_time",
+                "scaling": 1.0,
+                "visible": true
             }
+        ]
         };
         var g1 = new FrontendCreator(g1Config);
         }

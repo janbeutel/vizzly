@@ -1,5 +1,5 @@
 //
-// (c) 2011 ETH Zurich, Computer Engineering and Networks Laboratory
+// (c) 2012 ETH Zurich, Computer Engineering and Networks Laboratory
 //
 
 // The map code is only useful when the Google Maps API has been loaded
@@ -286,10 +286,10 @@ if(typeof google == 'object') {
                 $(selectDiv).css({'padding-top':'5px'});
                 this.signalSelectElement = document.createElement("select");
                 selectDiv.appendChild(this.signalSelectElement);
-                for(i=0; i < this.config.signals.y1.length; i++) {
-                    if(this.config.signals.y1[i].visible) {
+                for(i=0; i < this.config.signals.length; i++) {
+                    if(this.config.signals[i].visible) {
                         option = document.createElement("option");
-                        option.text = this.config.signals.y1[i].displayName;
+                        option.text = this.config.signals[i].displayName;
                         this.signalSelectElement.add(option);
                     }
                 }
@@ -311,12 +311,10 @@ if(typeof google == 'object') {
                 this.infoOverlay.updateAndShow('<img src=\"' + this.config.imageUrl + 'loading-indicator.gif\" ' +
                     'height=\"32\" width=\"32\">', '#FFFFFF', '#999999 solid 2px', 32, 32);
                 // Calculate grid dimensions that fit well to the current screen
-                var mapHeight = this.map.getDiv().offsetHeight;
-                var mapWidth = this.map.getDiv().offsetWidth;
-                this.gridNumRows = Math.floor(mapHeight/35).toString();
-                this.gridNumCols = Math.floor(mapWidth/35).toString();
                 var queryStr = this.config.appUrl;
-                queryStr += '&aggMap='+this.gridNumRows+','+this.gridNumCols;
+                queryStr += '&aggMap';
+                queryStr += '&canvasWidth='+this.map.getDiv().offsetWidth;
+                queryStr += '&canvasHeight='+this.map.getDiv().offsetHeight;
                 queryStr += '&mapBounds='+this.map.getBounds().toUrlValue();
                 if(this.selectRangeStart != null) {
                     queryStr += '&timeStart=' + this.selectRangeStart.getTime();
@@ -338,7 +336,7 @@ if(typeof google == 'object') {
                 };
                 req.open("POST", queryStr, true);
                 req.setRequestHeader("Content-Type", "text/plain")
-                req.send(JSON.stringify(this.config.signals));
+                req.send(JSON.stringify(this.config));
             };
 
             this.dataLoadedCallback = function(data) {
@@ -370,8 +368,8 @@ if(typeof google == 'object') {
                         obj = this;
 
                         markerImage = './images/marker_pink.png';
-                        if(this.config.signals.y1[this.selectedSignalIdx].thresholds && this.config.signals.y1[this.selectedSignalIdx].thresholds.length == 2) {
-                            var thresholds = this.config.signals.y1[this.selectedSignalIdx].thresholds;
+                        if(this.config.signals[this.selectedSignalIdx].thresholds && this.config.signals[this.selectedSignalIdx].thresholds.length == 2) {
+                            var thresholds = this.config.signals[this.selectedSignalIdx].thresholds;
                             var val = fields[2];
                             if(thresholds[0] < thresholds[1]) {
                                 if(val > thresholds[1]) {
@@ -651,21 +649,21 @@ function SignalSelect(initobject) {
     if(typeof this.config.selectedSignalIdx != 'undefined') {
         var visibleCnt = 0;
         this.shownSignals = new Array();
-        for (i=0; i < this.config.signals.y1.length; i++) {
+        for (i=0; i < this.config.signals.length; i++) {
             if(typeof this.config.selectedSignalIdx != 'undefined') {
-                if(!this.config.signals.y1[i].visible) {
+                if(!this.config.signals[i].visible) {
                     continue;
                 }
                 if(visibleCnt != this.config.selectedSignalIdx) {
                     visibleCnt++;
                     continue;
                 }
-                this.shownSignals.push(this.config.signals.y1[i]);
+                this.shownSignals.push(this.config.signals[i]);
                 visibleCnt++;
             }
         }
     } else {
-        this.shownSignals = this.config.signals.y1;
+        this.shownSignals = this.config.signals;
     }
     
     var obj = this;
@@ -818,7 +816,7 @@ function SignalSelect(initobject) {
     };
 }
 
-function PermaVizDygraph() {
+function VizzlyDygraph() {
     this.graph = null;
     this.selectRangeStart = null;
     this.selectRangeEnd = null;
@@ -946,7 +944,7 @@ function PermaVizDygraph() {
           };
           req.open("POST", queryStr, true);
           req.setRequestHeader("Content-Type", "text/plain")
-          req.send(JSON.stringify(this.config.signals));
+          req.send(JSON.stringify(this.config));
         }
     };
         
@@ -1048,7 +1046,8 @@ function PermaVizDygraph() {
         }
         if(this.config.mapBounds != null) {
             queryStr += '&mapBounds='+this.config.mapBounds;
-        }  
+        }
+        queryStr += '&canvasWidth='+this.element.offsetWidth;
         return queryStr;
     };
     this.xAxisFormatter = function(date, gran) {
@@ -1109,7 +1108,7 @@ function PermaVizDygraph() {
           $(s).text(' | ');
           $(this.zoomTextDiv).append(s);
           s = document.createElement('a');
-          $(s).text('Download CSV').attr('href', this.buildQuery()+'&viewConfig='+JSON.stringify(this.config.signals));
+          $(s).text('Download CSV').attr('href', this.buildQuery()+'&viewConfig='+JSON.stringify(this.config));
           $(this.zoomTextDiv).append(s);
         }
     };
@@ -1191,7 +1190,7 @@ function FrontendCreator(config) {
       this.initDygraph(graphDiv);
     };
     this.initDygraph = function(graphDiv) {
-        this.graph = new PermaVizDygraph(graphDiv);
+        this.graph = new VizzlyDygraph(graphDiv);
         var obj = this;
         this.graph.registerLoadingCallback(function(isLoading){obj.setLoading(isLoading)});
         this.graph.init(this.config, graphDiv, this.parentDiv);

@@ -52,6 +52,8 @@ public class CsvOutputGenerator {
      * Log.
      */
     private static Logger log = Logger.getLogger(CsvOutputGenerator.class);
+    
+    private static final int MAP_GRID_CELL_LENGTH_PIX = 35;
 
     public CsvOutputGenerator() {
     }
@@ -61,7 +63,7 @@ public class CsvOutputGenerator {
      * SensorVizDataSourceServlet when a user requests data.
      */
     public static String getTimedDataCSV(VizzlyView view, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, UserRequestPerformanceMeasurement reqMeas,
+            Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, UserRequestPerformanceMeasurement reqMeas,
             CacheManager cache, AbstractPerformanceTracker perfTracker, DataReaderRegistry readerRegistry)
     throws VizzlyException {
         if(!cache.isInitialized()) {
@@ -108,8 +110,8 @@ public class CsvOutputGenerator {
                 continue;
             }
             VizzlySignal s = signals.get(i);
-            if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, 600, cache)) {
-                int windowLengthThis = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, 600, cache);
+            if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
+                int windowLengthThis = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
                 if(windowLengthThis > windowLengthSec) {
                     windowLengthSec = windowLengthThis;
                 }
@@ -123,7 +125,7 @@ public class CsvOutputGenerator {
             }
             VizzlySignal s = signals.get(i);
             // Also do not try to load unaggregated data if the selection if out of bounds
-            if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, 600, cache) 
+            if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache) 
                     || timeFilterStart == null || timeFilterEnd == null 
                     || timeFilterStart > cache.getLastPacketTimestamp(s) 
                     || timeFilterEnd < cache.getFirstPacketTimestamp(s)) {
@@ -309,7 +311,7 @@ public class CsvOutputGenerator {
     }
     
     public static String getAggregationMapCSV(VizzlyView view, Long timeFilterStart, Long timeFilterEnd, Double latSW, Double lngSW, 
-            Double latNE, Double lngNE, int numRows, int numCols, int signalIdx, UserRequestPerformanceMeasurement reqMeas,
+            Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, UserRequestPerformanceMeasurement reqMeas,
             CacheManager cache, AbstractPerformanceTracker perfTracker, DataReaderRegistry readerRegistry)
             throws VizzlyException {
         if(!cache.isInitialized()) {
@@ -323,12 +325,15 @@ public class CsvOutputGenerator {
         if(!cache.isInCache(s)) {
             throw new VizzlyException("New signal requested. Please come back later.");
         }
-            
+    
+        // Setup map grid for aggregation
+        int numRows = new Double(Math.floor((double)canvasHeight/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
+        int numCols = new Double(Math.floor((double)canvasWidth/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
         LocationAggregationGrid grid = new LocationAggregationGrid(latSW, lngSW, latNE, lngNE, numRows, numCols);
         
-        if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, 600, cache)) {
+        if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
             // Get data from cache
-            int windowLengthSec = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, 600, cache);
+            int windowLengthSec = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
             reqMeas.setDataFetchStart();
             Vector<TimedLocationValue> d = cache.getSignalData(s, windowLengthSec, timeFilterStart, timeFilterEnd, false);
             reqMeas.setDataFetchEnd();

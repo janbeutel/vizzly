@@ -18,6 +18,8 @@ package ch.ethz.vizzly.datatype;
 
 import java.io.Serializable;
 
+import org.apache.log4j.Logger;
+
 /**
  * This class implements a data type that represents a requested signal. In contrast to
  * JsonVizzlyView, this data type implements equals() etc. functions.
@@ -36,6 +38,11 @@ public class VizzlySignal implements Serializable {
         public String type;
         public String name;
         public String serverAddress; /** optional */
+        
+        /**
+         * Log.
+         */
+        private static Logger log = Logger.getLogger(VizzlySignal.DataSource.class);
         
         public DataSource(String type, String name, String serverAddress) {
             this.type = type;
@@ -72,6 +79,7 @@ public class VizzlySignal implements Serializable {
                     hash += 40*ServerSpec.fromAddress(serverAddress).hashCode();
                 } catch(VizzlyException e) {
                     // Cannot help it here
+                    log.error(e.getLocalizedMessage(), e);
                 }
             }
             return hash;
@@ -128,6 +136,7 @@ public class VizzlySignal implements Serializable {
     public String timeField;
     public String locationLatField; // not implemented yet
     public String locationLngField;
+    public String aggFunction; // not implemented yet
     public Double scaling;
     public Boolean visible;
 
@@ -141,11 +150,26 @@ public class VizzlySignal implements Serializable {
         if(!timeField.equals(otherSignal.timeField)) return false;
         if(!dataSource.equals(otherSignal.dataSource)) return false;
         
+        if(locationLatField == null && otherSignal.locationLatField != null) return false;
+        if(locationLatField != null && otherSignal.locationLatField == null) return false;
+        if(locationLatField != null && !locationLatField.equals(otherSignal.locationLatField)) return false;
+        
+        if(locationLngField == null && otherSignal.locationLngField != null) return false;
+        if(locationLngField != null && otherSignal.locationLngField == null) return false;
+        if(locationLngField != null && !locationLngField.equals(otherSignal.locationLngField)) return false;
+        
         return true;
     }
 
     public int hashCode() {
-        return deviceSelect.hashCode()+dataSource.hashCode()*10+dataField.hashCode()*5+timeField.hashCode();
+        int hash = deviceSelect.hashCode()+dataSource.hashCode()*10+dataField.hashCode()*5+timeField.hashCode();
+        if(locationLatField != null) {
+            hash += locationLatField.hashCode()*2;
+        }
+        if(locationLngField != null) {
+            hash += locationLngField.hashCode()*3;
+        }
+        return hash;
     }
 
     public String getUniqueIdentifier() {

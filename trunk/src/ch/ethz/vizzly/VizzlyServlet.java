@@ -31,8 +31,11 @@ import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.CacheManager;
 import ch.ethz.vizzly.datatype.VizzlyException;
+import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
+import ch.ethz.vizzly.datatype.VizzlySignal;
 import ch.ethz.vizzly.datatype.VizzlyView;
 import ch.ethz.vizzly.performance.UserRequestPerformanceMeasurement;
+import ch.ethz.vizzly.util.VizzlySignalValidatorUtil;
 
 import com.google.gson.Gson;
 
@@ -45,6 +48,14 @@ import com.google.gson.Gson;
 public class VizzlyServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
+    
+    private final int DEFAULT_CANVAS_WIDTH = 600;
+    
+    private final int DEFAULT_CANVAS_HEIGHT = 400;
+    
+    private final int MAX_CANVAS_WIDTH = 10000;
+    
+    private final int MAX_CANVAS_HEIGHT = 6000;
 
     /**
      * Log.
@@ -72,18 +83,26 @@ public class VizzlyServlet extends HttpServlet {
         Double latNE = null;
         Double lngNE = null;
         int signalIdx = -1;
-        int numCols = 0;
-        int numRows = 0;
+        int canvasWidth = 0;
+        int canvasHeight = 0;
         // HTTP request parameters
+        // Parameters that correspond to actions
         String statsParam = req.getParameter("stats");
+        String aggMapParam = req.getParameter("aggMap");
+        String heatMapParam = req.getParameter("heatMap");
+        // Signal selection 
+        String viewConfigParam = req.getParameter("viewConfig");
+        // Time selection
         String timeStartParam = req.getParameter("timeStart");
         String timeEndParam = req.getParameter("timeEnd");
-        String viewConfigParam = req.getParameter("viewConfig");
+        // Map area of interest
         String mapBoundsParam = req.getParameter("mapBounds");
-        String aggMapParam = req.getParameter("aggMap");
+        // Signal to be displayed on the map (one at a time)
         String signalIdxParam = req.getParameter("signalIdx");
-        String heatMapParam = req.getParameter("heatMap");
-
+        // Dimension of canvas object used for displaying requested contents
+        String canvasWidthParam = req.getParameter("canvasWidth");
+        String canvasHeightParam = req.getParameter("canvasHeight");
+        
         // JSON string from HTTP request
         StringBuffer jsonReq = new StringBuffer();
         String line = null;
@@ -105,22 +124,27 @@ public class VizzlyServlet extends HttpServlet {
             // From POST contents
             viewConfig = gson.fromJson(jsonReq.toString(), VizzlyView.class);
         }
-        
-        /*if(viewConfig != null) {
-            for(VizzlySignal s : viewConfig.getVisibleSignals()) {
-                if(!s.validate()) {
-                    returnErrorMessage("View configuration is not valid.", resp);
-                    return;
+
+        if(viewConfig != null) {
+            try {
+                VizzlyStateContainer vizzlyState = 
+                        (VizzlyStateContainer)getServletContext().getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
+                for(VizzlySignal s : viewConfig.getVisibleSignals()) {
+                    VizzlySignalValidatorUtil.validateSignal(s, vizzlyState.getDataReaderRegistry());
                 }
+            } catch(VizzlyInvalidSignalException e) {
+                returnErrorMessage(e.getLocalizedMessage(), resp);
+                return;
             }
-        }*/
-     
+        }
+
         if(timeStartParam != null) {
             timeFilterStart = Long.parseLong(timeStartParam);
         }
         if(timeEndParam != null) {
             timeFilterEnd = Long.parseLong(timeEndParam);
         }
+        
         if(mapBoundsParam != null) {
             String[] s = mapBoundsParam.split(",");
             latSW = Double.parseDouble(s[0]);
@@ -128,18 +152,29 @@ public class VizzlyServlet extends HttpServlet {
             latNE = Double.parseDouble(s[2]);
             lngNE = Double.parseDouble(s[3]);
         }
+        
         if(signalIdxParam != null) {
             signalIdx = Integer.parseInt(signalIdxParam);
         }
+        
+        canvasWidth = DEFAULT_CANVAS_WIDTH;
+        canvasHeight = DEFAULT_CANVAS_HEIGHT;
+        if(canvasWidthParam != null) {
+            canvasWidth = Integer.parseInt(canvasWidthParam);
+            if(canvasWidth > MAX_CANVAS_WIDTH) {
+                canvasWidth = MAX_CANVAS_WIDTH;
+            }
+        }
+        if(canvasHeightParam != null) {
+            canvasHeight = Integer.parseInt(canvasHeightParam);
+            if(canvasHeight > MAX_CANVAS_HEIGHT) {
+                canvasHeight = MAX_CANVAS_HEIGHT;
+            }
+        }
 
         if(aggMapParam != null) {
-            String[] s = aggMapParam.split(",");
-            numRows = Integer.parseInt(s[0]);
-            numCols = Integer.parseInt(s[1]);
-            numRows = (numRows > 100) ? 100 : ((numRows < 1) ? 1 : numRows);
-            numCols = (numCols > 100) ? 100 : ((numCols < 1) ? 1 : numCols);
             // Respond with map grid data
-            getAggregationMapCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, numRows, numCols, signalIdx, resp, reqMeas);
+            getAggregationMapCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, resp, reqMeas);
         } else if(heatMapParam != null) {
             // Respond with a transparent PNG that displays a heat map
             getHeatMap(resp);
@@ -148,14 +183,14 @@ public class VizzlyServlet extends HttpServlet {
             showPerformanceStats(resp);
         } else if(viewConfig != null) { 
             // Respond with a time series
-            getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, resp, reqMeas);
+            getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, resp, reqMeas);
         } else {
             returnErrorMessage("Invalid request parameters.", resp);
         }
     }
 
     private void getTimedDataCSV(VizzlyView viewConfig, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, HttpServletResponse resp, 
+            Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, HttpServletResponse resp, 
             UserRequestPerformanceMeasurement reqMeas)
             throws IOException
             {
@@ -165,10 +200,11 @@ public class VizzlyServlet extends HttpServlet {
         String output = "";
         try {
             output = CsvOutputGenerator.getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, 
-                    lngSW, latNE, lngNE, signalIdx, reqMeas, vizzlyState.getCacheManager(),
+                    lngSW, latNE, lngNE, signalIdx, canvasWidth, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {
-            output = "# ERROR: " + e.getLocalizedMessage() + "\n";
+            returnErrorMessage(e.getLocalizedMessage(), resp);
+            return;
         }
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setContentType("text/csv; charset=UTF-8");
@@ -180,7 +216,7 @@ public class VizzlyServlet extends HttpServlet {
             }
 
     private void getAggregationMapCSV(VizzlyView viewConfig, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int numRows, int numCols, int signalIdx, HttpServletResponse resp,
+            Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, HttpServletResponse resp,
             UserRequestPerformanceMeasurement reqMeas)
                     throws IOException
                     {
@@ -190,10 +226,11 @@ public class VizzlyServlet extends HttpServlet {
         String output = "";
         try {
             output = CsvOutputGenerator.getAggregationMapCSV(viewConfig, timeFilterStart, timeFilterEnd, 
-                    latSW, lngSW, latNE, lngNE, numRows, numCols, signalIdx, reqMeas, vizzlyState.getCacheManager(),
+                    latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {
-            output = "# ERROR: " + e.getLocalizedMessage() + "\n";
+            returnErrorMessage(e.getLocalizedMessage(), resp);
+            return;
         }
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setContentType("text/csv; charset=UTF-8");
