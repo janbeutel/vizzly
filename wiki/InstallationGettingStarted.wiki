@@ -12,3 +12,9 @@ We use Ant for building Vizzly. While there is also a target that creates a gene
   # In the main folder, run _ant jetty-deploy_  for building the WAR file that is then deployed in Jetty
   # Go to _./jetty-runtime_, create your own copy of _start_vizzly.sh_ by copying the provided _start_vizzly.sh.example_
   # Start Vizzly using _./start_vizzly.sh_
+
+= Default URLs & Examples =
+
+  * http://localhost:8080/ - An example of the Vizzly map widget
+  * http://localhost:8080/plottest.html - An example of the Vizzly time series widget
+  * http://localhost:8080/cachestatus.jsp - Cache status page
