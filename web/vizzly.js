@@ -259,196 +259,187 @@ if(typeof google == 'object') {
             };
             this.map = new google.maps.Map(this.canvas,
                 mapOptions);
+            
+            var transitLayer = new google.maps.TransitLayer();
+            transitLayer.setMap(this.map);
 
-                var transitOptions = {
-                    getTileUrl: function(coord, zoom) {
-                        return "http://mt1.google.com/vt/lyrs=m@155076273,transit:comp|vm:&" +
-                        "hl=en&opts=r&s=Galil&z=" + zoom + "&x=" + coord.x + "&y=" + coord.y;
-                    },
-                    tileSize: new google.maps.Size(256, 256),
-                    isPng: true
-                };
+            obj = this;
+            google.maps.event.addListener(this.map, 'dragend', function() { obj.queryData(); });
+            google.maps.event.addListener(this.map, 'zoom_changed', function() { obj.queryData(); });
+            google.maps.event.addListener(this.map, 'tilesloaded', function() { obj.queryData(); });
+            //google.maps.event.addListener(this.map, 'bounds_changed', function() { obj.queryData(); });
 
-                var transitMapType = new google.maps.ImageMapType(transitOptions);
-                this.map.overlayMapTypes.insertAt(0, transitMapType);
+            this.setupTimeSlider();
 
-                obj = this;
-                google.maps.event.addListener(this.map, 'dragend', function() { obj.queryData(); });
-                google.maps.event.addListener(this.map, 'zoom_changed', function() { obj.queryData(); });
-                google.maps.event.addListener(this.map, 'tilesloaded', function() { obj.queryData(); });
-                //google.maps.event.addListener(this.map, 'bounds_changed', function() { obj.queryData(); });
-
-                this.setupTimeSlider();
-
-                // Add signal select box
-                this.selectedSignalIdx = 0;
-                var selectDiv = document.createElement("div");
-                $(selectDiv).css({'padding-top':'5px'});
-                this.signalSelectElement = document.createElement("select");
-                selectDiv.appendChild(this.signalSelectElement);
-                for(i=0; i < this.config.signals.length; i++) {
-                    if(this.config.signals[i].visible) {
-                        option = document.createElement("option");
-                        option.text = this.config.signals[i].displayName;
-                        this.signalSelectElement.add(option);
-                    }
+            // Add signal select box
+            this.selectedSignalIdx = 0;
+            var selectDiv = document.createElement("div");
+            $(selectDiv).css({'padding-top':'5px'});
+            this.signalSelectElement = document.createElement("select");
+            selectDiv.appendChild(this.signalSelectElement);
+            for(i=0; i < this.config.signals.length; i++) {
+                if(this.config.signals[i].visible) {
+                    option = document.createElement("option");
+                    option.text = this.config.signals[i].displayName;
+                    this.signalSelectElement.add(option);
                 }
-                this.signalSelectElement.onchange = function() { 
-                    obj.selectedSignalIdx = obj.signalSelectElement.selectedIndex;
-                    obj.queryData();
-                };
-
-                this.map.controls[google.maps.ControlPosition.TOP_CENTER].push(selectDiv);
-                
-                //var heatmap = new HeatOverlay(this.map, zurich);
-                
-                this.infoOverlay = new InfoOverlay(this.map);
-                
-            };
-            this.queryData = function() {
-                this.infoOverlay.hide();
-                this.signalSelectElement.disabled = true;
-                this.infoOverlay.updateAndShow('<img src=\"' + this.config.imageUrl + 'loading-indicator.gif\" ' +
-                    'height=\"32\" width=\"32\">', '#FFFFFF', '#999999 solid 2px', 32, 32);
-                // Calculate grid dimensions that fit well to the current screen
-                var queryStr = this.config.appUrl;
-                queryStr += '&aggMap';
-                queryStr += '&canvasWidth='+this.map.getDiv().offsetWidth;
-                queryStr += '&canvasHeight='+this.map.getDiv().offsetHeight;
-                queryStr += '&mapBounds='+this.map.getBounds().toUrlValue();
-                if(this.selectRangeStart != null) {
-                    queryStr += '&timeStart=' + this.selectRangeStart.getTime();
-                }
-                if(this.selectRangeEnd != null) {
-                    queryStr += '&timeEnd=' + this.selectRangeEnd.getTime();
-                }
-                if(this.selectedSignalIdx != null) {
-                    queryStr += '&signalIdx=' + this.selectedSignalIdx;
-                }
-                var req = new XMLHttpRequest();
-                obj = this;
-                req.onreadystatechange = function() {
-                    if (req.readyState == 4) {
-                        if (req.status == 200) {
-                            obj.dataLoadedCallback(req.responseText);
-                        }
-                    }
-                };
-                req.open("POST", queryStr, true);
-                req.setRequestHeader("Content-Type", "text/plain")
-                req.send(JSON.stringify(this.config));
+            }
+            this.signalSelectElement.onchange = function() { 
+                obj.selectedSignalIdx = obj.signalSelectElement.selectedIndex;
+                obj.queryData();
             };
 
-            this.dataLoadedCallback = function(data) {
-                this.signalSelectElement.disabled = false;
-                this.infoOverlay.hide();
-                var errorFromServer = data.match(/# ERROR:\s*.*/g);
-                if(errorFromServer == null) {
-                    var range = data.match(/#\s*[-]*\d*,\s*[-]*\d*/)[0].match(/[-]*\d+/g);
-                    this.fullDataTimeRange = new Array(parseInt(range[0]), parseInt(range[1]));
-                    this.timeSlider.setMaxRange(this.fullDataTimeRange[0], this.fullDataTimeRange[1]);
-                    if (this.selectRangeStart==null && this.selectRangeEnd==null) {
-                        this.selectRangeStart=new Date(this.fullDataTimeRange[0]);
-                        this.selectRangeEnd=new Date(this.fullDataTimeRange[1]);
+            this.map.controls[google.maps.ControlPosition.TOP_CENTER].push(selectDiv);
+            
+            //var heatmap = new HeatOverlay(this.map, zurich);
+            
+            this.infoOverlay = new InfoOverlay(this.map);
+            
+        };
+        this.queryData = function() {
+            this.infoOverlay.hide();
+            this.signalSelectElement.disabled = true;
+            this.infoOverlay.updateAndShow('<img src=\"' + this.config.imageUrl + 'loading-indicator.gif\" ' +
+                'height=\"32\" width=\"32\">', '#FFFFFF', '#999999 solid 2px', 32, 32);
+            // Calculate grid dimensions that fit well to the current screen
+            var queryStr = this.config.appUrl;
+            queryStr += '&aggMap';
+            queryStr += '&canvasWidth='+this.map.getDiv().offsetWidth;
+            queryStr += '&canvasHeight='+this.map.getDiv().offsetHeight;
+            queryStr += '&mapBounds='+this.map.getBounds().toUrlValue();
+            if(this.selectRangeStart != null) {
+                queryStr += '&timeStart=' + this.selectRangeStart.getTime();
+            }
+            if(this.selectRangeEnd != null) {
+                queryStr += '&timeEnd=' + this.selectRangeEnd.getTime();
+            }
+            if(this.selectedSignalIdx != null) {
+                queryStr += '&signalIdx=' + this.selectedSignalIdx;
+            }
+            var req = new XMLHttpRequest();
+            obj = this;
+            req.onreadystatechange = function() {
+                if (req.readyState == 4) {
+                    if (req.status == 200) {
+                        obj.dataLoadedCallback(req.responseText);
                     }
-                    this.timeSlider.setRange(this.selectRangeStart,this.selectRangeEnd);
-                    for (i in this.markersArray) {
-                        google.maps.event.clearInstanceListeners(this.markersArray[i]);
-                        this.markersArray[i].setMap(null);
-                    }
-                    this.markersArray.length = 0;
-                    lines = data.split("\n");
-                    for(var i = 0; i<lines.length; i++) {
-                        line = lines[i];
-                        if (line.length == 0) continue;
-                        if (line[0] == '#') continue;
-                        var fields = line.split(',');
-                        if (fields.length < 2) continue;
-                        var latLng = new google.maps.LatLng(fields[0],fields[1]);
-                        obj = this;
+                }
+            };
+            req.open("POST", queryStr, true);
+            req.setRequestHeader("Content-Type", "text/plain")
+            req.send(JSON.stringify(this.config));
+        };
 
-                        markerImage = './images/marker_pink.png';
-                        if(this.config.signals[this.selectedSignalIdx].thresholds && this.config.signals[this.selectedSignalIdx].thresholds.length == 2) {
-                            var thresholds = this.config.signals[this.selectedSignalIdx].thresholds;
-                            var val = fields[2];
-                            if(thresholds[0] < thresholds[1]) {
-                                if(val > thresholds[1]) {
-                                    markerImage = this.config.imageUrl + 'marker_green.png';
-                                } else if(val > thresholds[0]) {
-                                    markerImage = this.config.imageUrl + 'marker_yellow.png';
-                                } else {
-                                    markerImage = this.config.imageUrl + 'marker_red.png';
-                                }
+        this.dataLoadedCallback = function(data) {
+            this.signalSelectElement.disabled = false;
+            this.infoOverlay.hide();
+            var errorFromServer = data.match(/# ERROR:\s*.*/g);
+            if(errorFromServer == null) {
+                var range = data.match(/#\s*[-]*\d*,\s*[-]*\d*/)[0].match(/[-]*\d+/g);
+                this.fullDataTimeRange = new Array(parseInt(range[0]), parseInt(range[1]));
+                this.timeSlider.setMaxRange(this.fullDataTimeRange[0], this.fullDataTimeRange[1]);
+                if (this.selectRangeStart==null && this.selectRangeEnd==null) {
+                    this.selectRangeStart=new Date(this.fullDataTimeRange[0]);
+                    this.selectRangeEnd=new Date(this.fullDataTimeRange[1]);
+                }
+                this.timeSlider.setRange(this.selectRangeStart,this.selectRangeEnd);
+                for (i in this.markersArray) {
+                    google.maps.event.clearInstanceListeners(this.markersArray[i]);
+                    this.markersArray[i].setMap(null);
+                }
+                this.markersArray.length = 0;
+                lines = data.split("\n");
+                for(var i = 0; i<lines.length; i++) {
+                    line = lines[i];
+                    if (line.length == 0) continue;
+                    if (line[0] == '#') continue;
+                    var fields = line.split(',');
+                    if (fields.length < 2) continue;
+                    var latLng = new google.maps.LatLng(fields[0],fields[1]);
+                    obj = this;
+
+                    markerImage = './images/marker_pink.png';
+                    if(this.config.signals[this.selectedSignalIdx].thresholds && this.config.signals[this.selectedSignalIdx].thresholds.length == 2) {
+                        var thresholds = this.config.signals[this.selectedSignalIdx].thresholds;
+                        var val = fields[2];
+                        if(thresholds[0] < thresholds[1]) {
+                            if(val > thresholds[1]) {
+                                markerImage = this.config.imageUrl + 'marker_green.png';
+                            } else if(val > thresholds[0]) {
+                                markerImage = this.config.imageUrl + 'marker_yellow.png';
                             } else {
-                                if(val < thresholds[1]) {
-                                    markerImage = this.config.imageUrl + 'marker_green.png';
-                                } else if(val < thresholds[0]) {
-                                    markerImage = this.config.imageUrl + 'marker_yellow.png';
-                                } else {
-                                    markerImage = this.config.imageUrl + 'marker_red.png';
-                                }
+                                markerImage = this.config.imageUrl + 'marker_red.png';
+                            }
+                        } else {
+                            if(val < thresholds[1]) {
+                                markerImage = this.config.imageUrl + 'marker_green.png';
+                            } else if(val < thresholds[0]) {
+                                markerImage = this.config.imageUrl + 'marker_yellow.png';
+                            } else {
+                                markerImage = this.config.imageUrl + 'marker_red.png';
                             }
                         }
-
-                        var marker = new AggIcon(this.map, latLng, fields[2], markerImage, obj);
-                        this.markersArray.push(marker);
                     }
-                } else {
-                    this.infoOverlay.updateAndShow("(Server) " + errorFromServer[0].replace(/# ERROR:/, ""), '#FF9999', '2px solid red', 300, 30);
+
+                    var marker = new AggIcon(this.map, latLng, fields[2], markerImage, obj);
+                    this.markersArray.push(marker);
                 }
-            };
-            this.setupTimeSlider = function() {
-                var timeSliderWithInfoDiv = document.createElement('div');
-                $(timeSliderWithInfoDiv).css({'padding-top':'5px','width':'400px'});
-                var timeSliderInfo = document.createElement('div');
-                obj = this;
-                this.timeSlider = new TimeSlider({
-                    changedCallback : function(mindate, maxdate) {
-                        obj.selectRangeStart = mindate;
-                        obj.selectRangeEnd = maxdate;
-                        obj.queryData();
-                    },
-                    width: 300,
-                    infoHtmlElement: timeSliderInfo
-                });
-                timeSliderWithInfoDiv.appendChild(this.timeSlider.getHtmlElement());
-                timeSliderWithInfoDiv.appendChild(timeSliderInfo);
-                $(timeSliderInfo).css({'opacity':'0.7', 'background-color':'#fff', 'left':'-50px', 'position':'absolute', 'width':'400px', 'text-align':'center'});
+            } else {
+                this.infoOverlay.updateAndShow("(Server) " + errorFromServer[0].replace(/# ERROR:/, ""), '#FF9999', '2px solid red', 300, 30);
+            }
+        };
+        this.setupTimeSlider = function() {
+            var timeSliderWithInfoDiv = document.createElement('div');
+            $(timeSliderWithInfoDiv).css({'padding-top':'5px','width':'400px'});
+            var timeSliderInfo = document.createElement('div');
+            obj = this;
+            this.timeSlider = new TimeSlider({
+                changedCallback : function(mindate, maxdate) {
+                    obj.selectRangeStart = mindate;
+                    obj.selectRangeEnd = maxdate;
+                    obj.queryData();
+                },
+                width: 300,
+                infoHtmlElement: timeSliderInfo
+            });
+            timeSliderWithInfoDiv.appendChild(this.timeSlider.getHtmlElement());
+            timeSliderWithInfoDiv.appendChild(timeSliderInfo);
+            $(timeSliderInfo).css({'opacity':'0.7', 'background-color':'#fff', 'left':'-50px', 'position':'absolute', 'width':'400px', 'text-align':'center'});
 
-                this.map.controls[google.maps.ControlPosition.TOP_CENTER].push(timeSliderWithInfoDiv);
-            };
-            this.openInfoWindow = function(pos) {
-                container = document.createElement('div');
-                $(container).css({'width':(parseInt(this.config.graph.width)+100) + 'px', 'height':(parseInt(this.config.graph.height)+100) + 'px'});
+            this.map.controls[google.maps.ControlPosition.TOP_CENTER].push(timeSliderWithInfoDiv);
+        };
+        this.openInfoWindow = function(pos) {
+            container = document.createElement('div');
+            $(container).css({'width':(parseInt(this.config.graph.width)+100) + 'px', 'height':(parseInt(this.config.graph.height)+100) + 'px'});
 
-                var graphConfig = this.config;
+            var graphConfig = this.config;
 
-                // Calculate area of interest
-                var distLng = (this.map.getBounds().getNorthEast().lng()-this.map.getBounds().getSouthWest().lng())/this.gridNumCols;
-                var distLat = (this.map.getBounds().getNorthEast().lat()-this.map.getBounds().getSouthWest().lat())/this.gridNumRows;
-                var latSW = pos.lat()-(distLat/2);
-                var lngSW = pos.lng()-(distLng/2);
-                var latNE = pos.lat()+(distLat/2);
-                var lngNE = pos.lng()+(distLng/2);
-                graphConfig.mapBounds = latSW + ',' + lngSW + ',' + latNE + ',' + lngNE;
-                graphConfig.selectRangeStart = this.selectRangeStart;
-                graphConfig.selectRangeEnd = this.selectRangeEnd;
-                graphConfig.selectedSignalIdx = this.selectedSignalIdx;
-                graphConfig.graph.div = container;
+            // Calculate area of interest
+            var distLng = (this.map.getBounds().getNorthEast().lng()-this.map.getBounds().getSouthWest().lng())/this.gridNumCols;
+            var distLat = (this.map.getBounds().getNorthEast().lat()-this.map.getBounds().getSouthWest().lat())/this.gridNumRows;
+            var latSW = pos.lat()-(distLat/2);
+            var lngSW = pos.lng()-(distLng/2);
+            var latNE = pos.lat()+(distLat/2);
+            var lngNE = pos.lng()+(distLng/2);
+            graphConfig.mapBounds = latSW + ',' + lngSW + ',' + latNE + ',' + lngNE;
+            graphConfig.selectRangeStart = this.selectRangeStart;
+            graphConfig.selectRangeEnd = this.selectRangeEnd;
+            graphConfig.selectedSignalIdx = this.selectedSignalIdx;
+            graphConfig.graph.div = container;
 
-                var frontend = new FrontendCreator(graphConfig);
-                var infowindow = new google.maps.InfoWindow({
-                    content: container,
-                    position: pos
-                });
-                infowindow.open(this.map);
-            };
-            this.config = config;
-            this.canvas = canvas;
-            this.initMap();
-        }
+            var frontend = new FrontendCreator(graphConfig);
+            var infowindow = new google.maps.InfoWindow({
+                content: container,
+                position: pos
+            });
+            infowindow.open(this.map);
+        };
+        this.config = config;
+        this.canvas = canvas;
+        this.initMap();
     }
-Date.prototype.formatTime =  function() {
+}
+Date.prototype.formatTime = function() {
     expandNull = function(z, digits) {
         z = ""+z;
         for (var i = z.length; i<digits;i++)
