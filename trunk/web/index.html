@@ -30,10 +30,11 @@
             },
             "appUrl": "vizzly?",
             "imageUrl" : "./images/",
+            "mapCenter": new google.maps.LatLng(47.379022, 8.541001),
             "signals": [
             {
+                "displayName": "Ozone [ppb]",
                 "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
-				"displayName": "Ozone [ppb]",
 				"dataField": "ozone_ppb",
                 "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
 				"timeField": "generation_time",
@@ -45,9 +46,7 @@
             }
 	        ]
         };
-        //var g1 = new FrontendCreator(g1Config);
         var aggMap = new AggregationMap(g1Config, document.getElementById("map_canvas"));
-
    
     }
     </script>

@@ -85,8 +85,7 @@ public class MemCache extends AbstractCache {
         IndexedSignalData d = cacheMap.get(identifier);
         if(d == null) {
             // Create cache entry
-            // Very dirty ... but don't know better right now
-            if(r.get(0).location == null) {
+            if(!signal.hasLocation()) {
                 d = new IndexedSignalData(signal, r.size(), r.firstElement().timestamp, windowLengthSec);
                 addCacheEntry(signal, windowLengthSec, d);    
             } else {

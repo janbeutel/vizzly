@@ -134,7 +134,7 @@ public class VizzlySignal implements Serializable {
     public String dataField;
     public DeviceSelect deviceSelect;
     public String timeField;
-    public String locationLatField; // not implemented yet
+    public String locationLatField;
     public String locationLngField;
     public String aggFunction; // not implemented yet
     public Double scaling;
@@ -186,6 +186,10 @@ public class VizzlySignal implements Serializable {
         }
         
         return dataSourceStr+";"+dataField+";"+selectStr+";"+timeField;
+    }
+    
+    public boolean hasLocation() {
+        return (locationLatField != null && !locationLatField.equals(""));
     }
 
 }

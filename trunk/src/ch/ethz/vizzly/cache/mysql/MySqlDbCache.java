@@ -86,6 +86,9 @@ public class MySqlDbCache extends AbstractCache {
             "`sel_field` varchar(30) DEFAULT NULL," +
             "`sel_value` varchar(30) DEFAULT NULL," +
             "`time_field` varchar(30) NOT NULL," +
+            "`location_lat_field` varchar(30) DEFAULT NULL," +
+            "`location_lng_field` varchar(30) DEFAULT NULL," +
+            "`agg_function` varchar(10) DEFAULT NULL," +
             "PRIMARY KEY (`signal_id`)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
     
@@ -152,7 +155,8 @@ public class MySqlDbCache extends AbstractCache {
         Connection conn = ds.getConnection();
         Statement s = conn.createStatement();
         ResultSet rs = s.executeQuery("SELECT signal_id, ds_type, ds_name, ds_server, data_field, sel_type," +
-        		"sel_field, sel_value, time_field FROM " + signalsDbTable + " ORDER BY signal_id ASC");
+        		"sel_field, sel_value, time_field, location_lat_field, location_lng_field, agg_function FROM " + 
+                signalsDbTable + " ORDER BY signal_id ASC");
         HashMap<Integer,VizzlySignal> signalIdToSignal = new HashMap<Integer,VizzlySignal>();
         while(rs.next()) {
             VizzlySignal sig = new VizzlySignal();
@@ -162,6 +166,9 @@ public class MySqlDbCache extends AbstractCache {
             sig.dataField = rs.getString("data_field");
             sig.deviceSelect = new VizzlySignal.DeviceSelect(rs.getString("sel_type"), rs.getString("sel_field"), rs.getString("sel_value"));
             sig.timeField = rs.getString("time_field");
+            sig.locationLatField = rs.getString("location_lat_field");
+            sig.locationLngField = rs.getString("location_lng_field");
+            sig.aggFunction = rs.getString("agg_function");
             seenSignals.add(sig);
             seenSignalsEntryIds.put(sig, signalId);
             signalIdToSignal.put(signalId, sig);
@@ -230,12 +237,7 @@ public class MySqlDbCache extends AbstractCache {
             try {
                 int nextEntryId = getNextCacheEntryId();
 
-                // Again the location hack ...
-                Boolean hasLocationData = false;
-                if(r.get(0).location != null) {
-                    hasLocationData = true;
-                }
-
+                Boolean hasLocationData = signal.hasLocation();
                 String locationColumns = "";
                 if(hasLocationData) {
                     locationColumns = "`location_lat` double DEFAULT NULL," +
@@ -499,7 +501,8 @@ public class MySqlDbCache extends AbstractCache {
             Connection conn = ds.getConnection();
             conn.setAutoCommit(false);
             PreparedStatement p = conn.prepareStatement("INSERT INTO " + signalsDbTable + " (signal_id, ds_type, " +
-            		"ds_name, ds_server, data_field, sel_type, sel_field, sel_value, time_field) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            		"ds_name, ds_server, data_field, sel_type, sel_field, sel_value, time_field, location_lat_field, " +
+                    "location_lng_field, agg_function) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             p.setInt(1, nextSignalId);
             p.setString(2, signal.dataSource.type);
             p.setString(3, signal.dataSource.name);
@@ -509,6 +512,9 @@ public class MySqlDbCache extends AbstractCache {
             p.setString(7, signal.deviceSelect.field);
             p.setString(8, signal.deviceSelect.value);
             p.setString(9, signal.timeField);
+            p.setString(10, signal.locationLatField);
+            p.setString(11, signal.locationLngField);
+            p.setString(12, signal.aggFunction);
             p.executeUpdate();
             conn.commit();
             p.close();
