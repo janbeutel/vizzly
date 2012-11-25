@@ -249,10 +249,9 @@ if(typeof google == 'object') {
                 img1.src = this.config.imageUrl + 'loading-indicator.gif';
             }
             
-            var zurich = new google.maps.LatLng(47.379022, 8.541001);
             var mapOptions = {
                 zoom: 12,
-                center: zurich,
+                center: this.config.mapCenter,
                 panControl: false,
                 streetViewControl: false,
                 mapTypeId: google.maps.MapTypeId.ROADMAP

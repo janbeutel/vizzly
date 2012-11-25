@@ -126,11 +126,8 @@ public class GsnMultiDataFetcher {
             throw new VizzlyException("Field " + signal.dataField + " not found on " + signal.dataSource.serverAddress);
         }
 
-        Boolean includeLocation = false;
-        if(signal.locationLatField != null) {
-            includeLocation = true;
-        }
-
+        Boolean includeLocation = signal.hasLocation();
+      
         // GSN has a limit on the number of rows that is returned with each request
         int singleFetchRowLimit = (rowLimit > 0 && rowLimit < FETCH_MAX_ROW_LIMIT) ? rowLimit : FETCH_MAX_ROW_LIMIT;
         int round = 1;
