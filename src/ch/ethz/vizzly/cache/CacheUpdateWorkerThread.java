@@ -81,8 +81,6 @@ public class CacheUpdateWorkerThread extends Thread {
                 if(nextSignal != null) {
                     cache.updateCachedSignal(nextSignal);
                     workerSync.signalWorkerFinished(workerId);
-                } else {
-                    //log.debug("Worker " + _workerId + ": Nothing to process.");
                 }
                 if(roundCnt == 0) {
                     log.debug("Worker " + workerId + ": Processing finished.");
