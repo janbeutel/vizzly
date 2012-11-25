@@ -109,7 +109,10 @@ public class CacheUpdateWorkerSynchronization {
                 toProcess = signals.get(currentSignalIdx);
                 for(int i = 0; i < workerSignal.length; i++) {
                     // Check if the next signal is currently updated by another thread
-                    if(workerSignal[i] != null && workerSignal[i].equals(toProcess)) {
+                    // Additionally avoid accessing the same data source (e.g., a MySQL table) 
+                    // in parallel as this is often slower
+                    if(workerSignal[i] != null && (workerSignal[i].equals(toProcess)
+                            || workerSignal[i].dataSource.equals(toProcess.dataSource))) {
                         log.debug("Worker " + workerId + ": Next signal is still in processing.");
                         access.release();
                         return null;
