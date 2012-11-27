@@ -32,14 +32,18 @@
     </target>
     <target name="war" depends="compile">
 		<war destfile="${dist}/vizzly.war" needxmlfile="false">
-			<fileset dir="web"/>
-			<lib dir="${lib}"/>
+			<fileset dir="web">
+                <exclude name="WEB-INF/jetty-env*"/>
+            </fileset>
+            <lib dir="${lib}"/>
 			<classes dir="${build}"/>
 		</war>
 	</target>
 	<target name="jetty-deploy" depends="compile">
 		<war destfile="dist/root-jetty.war" webxml="jetty-runtime/vizzly/jetty-filters.xml">
-			<fileset dir="web"/>
+			<fileset dir="web">
+			    <exclude name="WEB-INF/jetty-env.xml.example"/>
+			</fileset>
 			<lib dir="${lib}"/>
 			<classes dir="${build}"/>
 		</war>

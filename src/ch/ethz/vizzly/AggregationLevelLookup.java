@@ -22,15 +22,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.HashMap;
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.CacheManager;
-import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.TimedLocationValue;
+import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
 
 /**
@@ -44,7 +43,7 @@ import ch.ethz.vizzly.datatype.VizzlySignal;
 public class AggregationLevelLookup {
 
     public static final int MIN_WINDOW_LENGTH_SEC = 240;
-    
+
     private final String stateFile = "estimation.dat";
 
     /**
@@ -52,23 +51,20 @@ public class AggregationLevelLookup {
      */
     private static Logger log = Logger.getLogger(AggregationLevelLookup.class);
 
-    /**
-     * Used to protect the map of rate estimators.
-     */
-    private final Semaphore writeAccess = new Semaphore(1);
-    
+    private Object estimationFileLock = new Object();
+
     /**
      * Singleton
      */
     private static AggregationLevelLookup instance = null;
 
-    private HashMap<VizzlySignal,SamplingRateEstimation> rateEstimators = null;
-   
+    private ConcurrentHashMap<VizzlySignal,SamplingRateEstimation> rateEstimators = null;
+
     private AggregationLevelLookup() {
-        rateEstimators = new HashMap<VizzlySignal,SamplingRateEstimation>();
+        rateEstimators = new ConcurrentHashMap<VizzlySignal,SamplingRateEstimation>();
         loadStateFromFile();
     }
-    
+
     public static synchronized AggregationLevelLookup getInstance() {
         if(instance == null) {
             instance = new AggregationLevelLookup();
@@ -101,7 +97,7 @@ public class AggregationLevelLookup {
         }
         return ret;
     }
-    
+
     public int getWindowLength(VizzlySignal signal, Long timeFilterStart, 
             Long timeFilterEnd, int maxNumPoints, CacheManager cache) throws VizzlyException {
         int multiple = 1;
@@ -129,95 +125,83 @@ public class AggregationLevelLookup {
     }
 
     public void updateSamplingRateEstimation(VizzlySignal signal, Vector<TimedLocationValue> values) {
-        try {
-            writeAccess.acquire();
-            SamplingRateEstimation e = rateEstimators.get(signal);
-            if(e == null) {
-                e = new SamplingRateEstimation(values.firstElement().timestamp);
-                rateEstimators.put(signal, e);
-            }
-            e.updateEstimation(values);
-            writeAccess.release();
-            writeStateToFile();
-        } catch(InterruptedException ex) {
-            log.error(ex);
+        SamplingRateEstimation e = rateEstimators.get(signal);
+        if(e == null) {
+            e = new SamplingRateEstimation(values.firstElement().timestamp);
+            rateEstimators.put(signal, e);
         }
+        e.updateEstimation(values);
+        writeStateToFile();
     }
-    
+
     public void deleteSignalEstimation(VizzlySignal signal) {
-        try {
-            writeAccess.acquire();
-            rateEstimators.remove(signal);
-            writeAccess.release();
-            writeStateToFile();
-        } catch(InterruptedException ex) {
-            log.error(ex);
-        }
+        rateEstimators.remove(signal);
+        writeStateToFile();
     }
 
     private void writeStateToFile() {
         FileOutputStream fos = null;
         ObjectOutputStream o = null;
-        try {
-            writeAccess.acquire();
-            fos = new FileOutputStream(stateFile); 
-            o = new ObjectOutputStream(fos);
-            o.writeObject(Integer.valueOf(rateEstimators.size()));
-            for(VizzlySignal s : rateEstimators.keySet()) {
-                o.writeObject(s);
-                o.writeObject(rateEstimators.get(s));
+        synchronized(estimationFileLock) {
+            try {
+                fos = new FileOutputStream(stateFile); 
+                o = new ObjectOutputStream(fos);
+                o.writeObject(Integer.valueOf(rateEstimators.size()));
+                for(VizzlySignal s : rateEstimators.keySet()) {
+                    o.writeObject(s);
+                    o.writeObject(rateEstimators.get(s));
+                }
+            } catch(IOException e) {
+                log.error(stateFile, e);
+            } finally { 
+                try { 
+                    if(o != null) {
+                        o.close();
+                    }
+                    if(fos != null) {
+                        fos.close();
+                    }
+                } catch (Exception e) { 
+                    log.error("Error in writeStateToFile: " + e);
+                } 
             }
-        } catch(IOException e) {
-            log.error(stateFile, e);
-        } catch(InterruptedException e) {
-            log.error(e);
-        } finally { 
-            try { 
-                if(o != null) {
-                    o.close();
-                }
-                if(fos != null) {
-                    fos.close();
-                }
-                writeAccess.release();
-            } catch (Exception e) { 
-                log.error("Error in _writeStateToFile: " + e);
-            } 
         }
     }
 
     private synchronized void loadStateFromFile() {
         FileInputStream fis = null;
         ObjectInputStream o = null;
-        try {
-            File f = new File(stateFile);
-            if(!f.exists()) {
-                return;
-            }
-            fis = new FileInputStream(stateFile); 
-            o = new ObjectInputStream(fis); 
-            Integer numElements = (Integer)o.readObject();
-            log.debug("Loading " + numElements + " sampling rate estimations from file");
-            for(int i = 0; i < numElements; i++) {
-                VizzlySignal s = (VizzlySignal)o.readObject();
-                SamplingRateEstimation e = (SamplingRateEstimation)o.readObject();
-                rateEstimators.put(s, e);
-            }
-        } catch(IOException e) {
-            log.error(e);
-        } catch(ClassNotFoundException e) {
-            log.error(e);
-        } finally { 
+        synchronized(estimationFileLock) {
             try {
-                if(o != null) {
-                    o.close();
+                File f = new File(stateFile);
+                if(!f.exists()) {
+                    return;
                 }
-                if(fis != null) {
-                    fis.close();
+                fis = new FileInputStream(stateFile); 
+                o = new ObjectInputStream(fis); 
+                Integer numElements = (Integer)o.readObject();
+                log.debug("Loading " + numElements + " sampling rate estimations from file");
+                for(int i = 0; i < numElements; i++) {
+                    VizzlySignal s = (VizzlySignal)o.readObject();
+                    SamplingRateEstimation e = (SamplingRateEstimation)o.readObject();
+                    rateEstimators.put(s, e);
                 }
-            } catch (Exception e) { 
-                log.error("Error in loadStateFromFile: " + e);
-            } 
+            } catch(IOException e) {
+                log.error(e);
+            } catch(ClassNotFoundException e) {
+                log.error(e);
+            } finally { 
+                try {
+                    if(o != null) {
+                        o.close();
+                    }
+                    if(fis != null) {
+                        fis.close();
+                    }
+                } catch (Exception e) { 
+                    log.error("Error in loadStateFromFile: " + e);
+                } 
+            }
         }
     }
 
