@@ -194,20 +194,22 @@ public class MemCache extends AbstractCache {
 
     public Vector<CachedDataInfo> getCachedDataInfo() {
         Vector<CachedDataInfo> ret = new Vector<CachedDataInfo>();
-        for(IndexedSignalData d : cacheMap.values()) {
-            Boolean hasLocationData = false;
-            if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
-                hasLocationData = true;
+        synchronized(cacheMap) {
+            for(IndexedSignalData d : cacheMap.values()) {
+                Boolean hasLocationData = false;
+                if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
+                    hasLocationData = true;
+                }
+                Date lastPacketTimestamp = null;
+                if(d.getLastPacketTimestamp() != null) {
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTimeInMillis(d.getLastPacketTimestamp());
+                    lastPacketTimestamp = cal.getTime();    
+                }
+                CachedDataInfo i = new CachedDataInfo(d.getSignal(), d.getAvgInterval(), d.getNumElements(), 
+                        hasLocationData, d.getLastUpdate(), lastPacketTimestamp, d.getHits());
+                ret.add(i);
             }
-            Date lastPacketTimestamp = null;
-            if(d.getLastPacketTimestamp() != null) {
-                Calendar cal = Calendar.getInstance();
-                cal.setTimeInMillis(d.getLastPacketTimestamp());
-                lastPacketTimestamp = cal.getTime();    
-            }
-            CachedDataInfo i = new CachedDataInfo(d.getSignal(), d.getAvgInterval(), d.getNumElements(), 
-                    hasLocationData, d.getLastUpdate(), lastPacketTimestamp, d.getHits());
-            ret.add(i);
         }
         return ret;
     }
@@ -219,14 +221,16 @@ public class MemCache extends AbstractCache {
 
     public long getCacheSize() {
         long total = 0;
-        for(IndexedSignalData d : cacheMap.values()) {
-            if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
-                total += d.getNumElements() * 12;
-            } else {
-                total += d.getNumElements() * 4;
+        synchronized(cacheMap) {
+            for(IndexedSignalData d : cacheMap.values()) {
+                if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
+                    total += d.getNumElements() * 12;
+                } else {
+                    total += d.getNumElements() * 4;
+                }
             }
+            return total;
         }
-        return total;
     }
 
     public int getNumberOfSeenSignals() {
