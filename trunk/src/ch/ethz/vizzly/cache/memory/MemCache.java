@@ -18,9 +18,8 @@ package ch.ethz.vizzly.cache.memory;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -37,23 +36,21 @@ import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement.DataBackend;
  */
 public class MemCache extends AbstractCache {
 
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(MemCache.class);
 
-    private HashMap<String, IndexedSignalData> cacheMap = null;
+    private ConcurrentHashMap<String, IndexedSignalData> cacheMap = null;
 
-    private Vector<VizzlySignal> seenVizSignals = null;
+    private Vector<VizzlySignal> seenSignals = null;
 
     private final String description = "MemCache";
     
-    // Used to protect meta data
-    private final Semaphore writeAccess = new Semaphore(1);
-
     /*
      * Init memory cache
      */
     public MemCache() {
-        cacheMap = new HashMap<String, IndexedSignalData>();
-        seenVizSignals = new Vector<VizzlySignal>();
+        cacheMap = new ConcurrentHashMap<String, IndexedSignalData>();
+        seenSignals = new Vector<VizzlySignal>();
         isInitialized = true;
         dataBackend = DataBackend.MEMCACHE;
     }
@@ -102,7 +99,9 @@ public class MemCache extends AbstractCache {
         String identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
         IndexedSignalData c = cacheMap.get(identifier);
         if(c == null) {
-            safeCacheMapPut(identifier, d);
+            if(!cacheMap.containsKey(identifier)) {
+                cacheMap.put(identifier, d);
+            }
             addSignal(signal);
         }
     }
@@ -156,48 +155,28 @@ public class MemCache extends AbstractCache {
     }
     
     public void addSignal(VizzlySignal signal) {
-        try {
-            writeAccess.acquire();
-            if(!seenVizSignals.contains(signal)) {
-                seenVizSignals.add(signal);
+        synchronized(seenSignals) {
+            if(!seenSignals.contains(signal)) {
+                seenSignals.add(signal);
             }
-            writeAccess.release();
-        } catch(InterruptedException e) {
-            log.error(e);
         }
     }
 
-    private void safeCacheMapPut(String identifier, IndexedSignalData d) {
-        try {
-            writeAccess.acquire();
-            if(!cacheMap.containsKey(identifier)) {
-                cacheMap.put(identifier, d);
-            }
-            writeAccess.release();
-        } catch(InterruptedException e) {
-            log.error(e);
-        }
-    }
-    
     public Boolean removeSignal(VizzlySignal signal) {
         if(!isInitialized) {
             return false;
         }
-        try {
-            writeAccess.acquire();
-            seenVizSignals.remove(signal);
-            for(String k : cacheMap.keySet()) {
-                if(cacheMap.get(k).getSignal().equals(signal)) {
-                    cacheMap.remove(k);
-                }
+        synchronized(seenSignals) {
+            seenSignals.remove(signal);
+        }
+        for(String k : cacheMap.keySet()) {
+            if(cacheMap.get(k).getSignal().equals(signal)) {
+                cacheMap.remove(k);
             }
-            writeAccess.release();
-        } catch(InterruptedException e) {
-            log.error(e);
         }
         return true;
     }
-    
+
     public Vector<TimedLocationValue> getSignalData(VizzlySignal signal, int windowLengthSec, Long timeFilterStart, Long timeFilterEnd, Boolean updateStats) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, updateStats);
         if(d != null) {
@@ -231,7 +210,7 @@ public class MemCache extends AbstractCache {
 
     @SuppressWarnings("unchecked")
     public Vector<VizzlySignal> getSignals() {
-        return (Vector<VizzlySignal>)seenVizSignals.clone();
+        return (Vector<VizzlySignal>)seenSignals.clone();
     }
     
     public long getCacheSize() {
@@ -247,7 +226,7 @@ public class MemCache extends AbstractCache {
     }
 
     public int getNumberOfSeenSignals() {
-        return seenVizSignals.size();
+        return seenSignals.size();
     }
 
     public int getNumberOfCacheEntries() {
