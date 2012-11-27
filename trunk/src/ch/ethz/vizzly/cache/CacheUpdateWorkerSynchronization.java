@@ -17,7 +17,6 @@
 package ch.ethz.vizzly.cache;
 
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
 
 import org.apache.log4j.Logger;
 
@@ -36,15 +35,15 @@ public class CacheUpdateWorkerSynchronization {
 
     private VizzlySignal[] workerSignal = null;
 
-    private int currentSignalIdx = -1;
-
-    private final Semaphore access = new Semaphore(1);
-    
     private CacheUpdateWorkerThread[] workers = null;
 
+    private int[] workerCurrentSignalIdx = null;
+    
     private Boolean threadsStarted = false;
   
     private int numWorkers = 0;
+    
+    private Object workerSyncLock = new Object();
     
     /**
      * Log.
@@ -60,8 +59,10 @@ public class CacheUpdateWorkerSynchronization {
             this.numWorkers = numWorkers;
             workers = new CacheUpdateWorkerThread[numWorkers];
             workerSignal = new VizzlySignal[numWorkers];
+            workerCurrentSignalIdx = new int[numWorkers];
             for(int i = 0; i < workerSignal.length; i++) {
                 workerSignal[i] = null;
+                workerCurrentSignalIdx[i] = 0;
             }
             for(int i = 0; i < numWorkers; i++) {
                 if(workers[i] == null || !workers[i].isAlive()) {
@@ -77,72 +78,68 @@ public class CacheUpdateWorkerSynchronization {
     public VizzlySignal getNextPendingRemoval(int workerId) {
         if(cache.isInitialized() && cache.getSignalsToRemove().size() > 0) {
             VizzlySignal toProcess = null;
-            try {
-                access.acquire();
-                // After successful removal, the CacheManager removes the element from the list
-                toProcess = cache.getSignalsToRemove().firstElement();
+            // After successful removal, the CacheManager removes the element from the list
+            toProcess = cache.getSignalsToRemove().firstElement();
+            synchronized(workerSyncLock) {
                 for(int i = 0; i < workerSignal.length; i++) {
                     // Check if the next signal is currently updated by another thread
                     if(workerSignal[i] != null && workerSignal[i].equals(toProcess)) {
                         log.debug("Worker " + workerId + ": Next signal for removal is still in processing.");
-                        access.release();
                         return null;
                     }
                 }
                 workerSignal[workerId] = toProcess;
-                access.release();
-            } catch(InterruptedException e) {
-                log.debug("Interrupted in next signal", e);
-            }
-            return toProcess;
-        }
-        return null;
-    }
-    
-    public VizzlySignal getNextSignal(int workerId) {
-        if(cache.isInitialized() && cache.getNumberOfSeenSignals(cache.getNumberOfCaches()-1) > 0) {
-            VizzlySignal toProcess = null;
-            try {
-                access.acquire();
-                Vector<VizzlySignal> signals = cache.getSignals(cache.getNumberOfCaches()-1);
-                currentSignalIdx = (currentSignalIdx+1) % signals.size();
-                toProcess = signals.get(currentSignalIdx);
-                for(int i = 0; i < workerSignal.length; i++) {
-                    // Check if the next signal is currently updated by another thread
-                    // Additionally avoid accessing the same data source (e.g., a MySQL table) 
-                    // in parallel as this is often slower
-                    if(workerSignal[i] != null && (workerSignal[i].equals(toProcess)
-                            || workerSignal[i].dataSource.equals(toProcess.dataSource))) {
-                        log.debug("Worker " + workerId + ": Next signal is still in processing.");
-                        access.release();
-                        return null;
-                    }
-                }
-                workerSignal[workerId] = toProcess;
-                access.release();
-            } catch(InterruptedException e) {
-                log.debug("Interrupted in next signal", e);
             }
             return toProcess;
         }
         return null;
     }
 
-    public void signalWorkerFinished(int workerId) {
-        try {
-            access.acquire();
-            if(workerId >= 0 && workerId < workerSignal.length) {
-                workerSignal[workerId] = null;
-                //log.debug("Worker " + workerId + ": Release.");
-            } else {
-                log.error("Incorrect worker id: " + workerId + ", " + workerSignal.length);
+    public VizzlySignal getNextSignal(int workerId) {
+        if(cache.isInitialized() && cache.getNumberOfSeenSignals(cache.getNumberOfCaches()-1) > 0) {
+            VizzlySignal toProcess = null;
+            Vector<VizzlySignal> signals = cache.getSignals(cache.getNumberOfCaches()-1);
+            // Iterate through all available signals until a conflict-free signal is found
+            synchronized(workerSyncLock) {
+                for(int j=1; j < signals.size(); j++) {
+                    workerCurrentSignalIdx[workerId] = (workerCurrentSignalIdx[workerId]+j) % signals.size();
+                    toProcess = signals.get(workerCurrentSignalIdx[workerId]);
+                    for(int i=0; i < workerSignal.length; i++) {
+                        // Check if the next signal is currently updated by another thread
+                        // Additionally avoid accessing the same data source (e.g., a MySQL table) 
+                        // in parallel as this is often slower
+                        if(workerSignal[i] != null) {
+                            if(workerSignal[i].equals(toProcess)) {
+                                log.debug("Worker " + workerId + ": Next signal is already updated by another worker.");
+                                toProcess = null;
+                                break;
+                            } else if(workerSignal[i].dataSource.equals(toProcess.dataSource)) {
+                                log.debug("Worker " + workerId + ": Data source of next signal is already being accessed by another worker.");
+                                toProcess = null;
+                                break;
+                            }
+                        }
+                    }
+                    if(toProcess != null) {
+                        workerSignal[workerId] = toProcess;
+                        return toProcess;
+                    }
+                }
             }
-            access.release();
-        } catch(InterruptedException e) {
-            log.debug("Interrupted in finished", e);
+        }
+        return null;
+    }
+
+    public void signalWorkerFinished(int workerId) {
+        if(workerId >= 0 && workerId < workerSignal.length) {
+            synchronized(workerSyncLock) {
+                workerSignal[workerId] = null;
+            }
+        } else {
+            log.error("Incorrect worker id: " + workerId + ", " + workerSignal.length);
         }
     }
-    
+
     public void terminateThreads() {
         for(int i = 0; i < numWorkers; i++) {
             workers[i].setRunning(false);

@@ -34,8 +34,6 @@ public class CacheUpdateWorkerThread extends Thread {
     private final long sleepMsec = 5000;
 
     private CacheUpdateWorkerSynchronization workerSync = null;
-
-    private int roundCnt = 0;
     
     private CacheManager cache = null;
 
@@ -60,10 +58,7 @@ public class CacheUpdateWorkerThread extends Thread {
     public void run() {
         try {
             while(running) {
-                if(roundCnt == 0) {
-                    log.debug("Worker " + workerId + ": Processing next update job.");
-                }
-
+     
                 // Worker 0 is responsible for cleaning
                 if(workerId == 0) {
                     while(true) {
@@ -82,12 +77,8 @@ public class CacheUpdateWorkerThread extends Thread {
                     cache.updateCachedSignal(nextSignal);
                     workerSync.signalWorkerFinished(workerId);
                 }
-                if(roundCnt == 0) {
-                    log.debug("Worker " + workerId + ": Processing finished.");
-                }
                 try {
                     sleep(sleepMsec);
-                    roundCnt = (roundCnt+1) % 30;
                 } catch(InterruptedException e) {
                     log.debug("Interrupted", e);
                 }
