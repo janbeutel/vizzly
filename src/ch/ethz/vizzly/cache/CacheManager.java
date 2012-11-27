@@ -247,10 +247,9 @@ public class CacheManager {
     }
     
     // Called from web page to show the users that there are pending requests
+    @SuppressWarnings("unchecked")
     public Vector<VizzlySignal> getSignalsToRemove() {
-        synchronized(signalsToRemove) {
-            return signalsToRemove;
-        }
+        return (Vector<VizzlySignal>)(signalsToRemove.clone());
     }
 
     public Long getFirstPacketTimestamp(VizzlySignal signal) {

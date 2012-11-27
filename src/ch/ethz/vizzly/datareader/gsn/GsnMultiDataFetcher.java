@@ -232,18 +232,20 @@ public class GsnMultiDataFetcher {
         return data;
     }
 
-    private synchronized Boolean tryStructureUpdate() {
-        // Re-fetch server structure only if last update was a while ago
-        if(Calendar.getInstance().getTime().getTime()-lastStructureUpdate.getTime() < 300000L) {
-            return false;
+    private Boolean tryStructureUpdate() {
+        synchronized(lastStructureUpdate) {
+            // Re-fetch server structure only if last update was a while ago
+            if(Calendar.getInstance().getTime().getTime()-lastStructureUpdate.getTime() < 300000L) {
+                return false;
+            }
+            GsnServerStructure s = GsnServerStructure.fromGsnServer(serverSpec);
+            lastStructureUpdate = Calendar.getInstance().getTime();
+            // Might be empty when the GSN server is not willing to talk - better keep the old version then
+            if(s.getVirtualSensors().size() > 0) {
+                structure = s;
+            }
+            return true;
         }
-        GsnServerStructure s = GsnServerStructure.fromGsnServer(serverSpec);
-        lastStructureUpdate = Calendar.getInstance().getTime();
-        // Might be empty when the GSN server is not willing to talk - better keep the old version then
-        if(s.getVirtualSensors().size() > 0) {
-            structure = s;
-        }
-        return true;
     }
 
     public Boolean isVirtualSensorValid(String virtualSensor) {

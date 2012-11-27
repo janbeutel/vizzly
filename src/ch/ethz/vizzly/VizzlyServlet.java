@@ -102,6 +102,8 @@ public class VizzlyServlet extends HttpServlet {
         // Dimension of canvas object used for displaying requested contents
         String canvasWidthParam = req.getParameter("canvasWidth");
         String canvasHeightParam = req.getParameter("canvasHeight");
+        // Enforce the loading of unaggregated data
+        String forceLoadUnaggregatedParam = req.getParameter("forceLoadUnaggregated");
         
         // JSON string from HTTP request
         StringBuffer jsonReq = new StringBuffer();
@@ -197,17 +199,21 @@ public class VizzlyServlet extends HttpServlet {
         } else if(statsParam != null) {
             // Respond with performance statistics
             showPerformanceStats(resp);
-        } else if(viewConfig != null) { 
+        } else if(viewConfig != null) {
+            Boolean forceLoadUnaggregated = false;
+            if(forceLoadUnaggregatedParam != null) {
+                forceLoadUnaggregated = true;
+            }
             // Respond with a time series
-            getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, resp, reqMeas);
+            getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, resp, reqMeas);
         } else {
             returnErrorMessage("Invalid request parameters.", resp);
         }
     }
 
     private void getTimedDataCSV(VizzlyView viewConfig, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, HttpServletResponse resp, 
-            UserRequestPerformanceMeasurement reqMeas)
+            Double lngSW, Double latNE, Double lngNE, int signalIdx, boolean forceLoadUnaggregated, int canvasWidth, 
+            HttpServletResponse resp, UserRequestPerformanceMeasurement reqMeas)
             throws IOException
             {
         VizzlyStateContainer vizzlyState = 
@@ -216,7 +222,7 @@ public class VizzlyServlet extends HttpServlet {
         String output = "";
         try {
             output = CsvOutputGenerator.getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, 
-                    lngSW, latNE, lngNE, signalIdx, canvasWidth, reqMeas, vizzlyState.getCacheManager(),
+                    lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {
             returnErrorMessage(e.getLocalizedMessage(), resp);

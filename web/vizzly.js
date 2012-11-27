@@ -821,6 +821,7 @@ function VizzlyDygraph() {
     this.zoomTextDiv = null;
     this.signalSelect = null;
     this.selectedSignalIdx = null;
+    this.forceLoadUnaggregated = false;
     this.yaxisrange=[];
     this.init = function(config, element, mousediv) {
          this.config = config;
@@ -1038,6 +1039,10 @@ function VizzlyDygraph() {
         if(this.config.mapBounds != null) {
             queryStr += '&mapBounds='+this.config.mapBounds;
         }
+        if(this.forceLoadUnaggregated) {
+            queryStr += '&forceLoadUnaggregated';
+            this.forceLoadUnaggregated = false;
+        }
         queryStr += '&canvasWidth='+this.element.offsetWidth;
         return queryStr;
     };
@@ -1071,27 +1076,27 @@ function VizzlyDygraph() {
     };
     this.updateZoomTextDiv = function() {
         $(this.zoomTextDiv).children().remove();
-        this.appendZoomTextLink(this.zoomTextDiv, "Max", this.fullDataTimeRange[0], this.fullDataTimeRange[1]);
+        this.appendZoomTextLink(this.zoomTextDiv, "Max", this.fullDataTimeRange[0], this.fullDataTimeRange[1], false);
         var diff = Math.floor((this.fullDataTimeRange[1]-this.fullDataTimeRange[0])/(3600*24*1000));
         if(diff > 365*1.5) {
             bounds = this.calculateTextLinkBounds(365*24*3600*1000);
-            this.appendZoomTextLink(this.zoomTextDiv, "1y", bounds[0], bounds[1]);
+            this.appendZoomTextLink(this.zoomTextDiv, "1y", bounds[0], bounds[1], false);
         }
         if(diff > 90*1.5) {
             bounds = this.calculateTextLinkBounds(90*24*3600*1000);
-            this.appendZoomTextLink(this.zoomTextDiv, "3m", bounds[0], bounds[1]);
+            this.appendZoomTextLink(this.zoomTextDiv, "3m", bounds[0], bounds[1], false);
         }
         if(diff > 7*1.5) {
             bounds = this.calculateTextLinkBounds(7*24*3600*1000);
-            this.appendZoomTextLink(this.zoomTextDiv, "1w", bounds[0], bounds[1]);
+            this.appendZoomTextLink(this.zoomTextDiv, "1w", bounds[0], bounds[1], false);
         }
         if(diff > 1.5) {
             bounds = this.calculateTextLinkBounds(1*24*3600*1000);
-            this.appendZoomTextLink(this.zoomTextDiv, "1d", bounds[0], bounds[1]);
+            this.appendZoomTextLink(this.zoomTextDiv, "1d", bounds[0], bounds[1], false);
         }
         d = new Date();
         if(this.fullDataTimeRange[1] >= d.getTime()-(12*3600*1000)) {
-            this.appendZoomTextLink(this.zoomTextDiv, "Now", this.fullDataTimeRange[1]-(12*3600*1000),this.fullDataTimeRange[1]);
+            this.appendZoomTextLink(this.zoomTextDiv, "Now", this.fullDataTimeRange[1]-(12*3600*1000),this.fullDataTimeRange[1], true);
         }
         // Create link for CSV download
         if (!this.config.loaddata) {
@@ -1117,20 +1122,21 @@ function VizzlyDygraph() {
         }
         return new Array(newMinDate, newMaxDate);
     };
-    this.appendZoomTextLink = function(parentElement, caption, minDate, maxDate) {
+    this.appendZoomTextLink = function(parentElement, caption, minDate, maxDate, forceLoadUnaggregated) {
         var h = document.createElement('a');
         var obj = this;
-        $(h).text(caption).click(function() { obj.textZoom(minDate, maxDate); return false; });
+        $(h).text(caption).click(function() { obj.textZoom(minDate, maxDate, forceLoadUnaggregated); return false; });
         $(h).attr("href", "");
         $(parentElement).append(h);
         var s = document.createElement('span');
         $(s).text(' ');
         $(parentElement).append(s);
     };
-    this.textZoom = function(minDate, maxDate) {
+    this.textZoom = function(minDate, maxDate, forceLoadUnaggregated) {
         this.timeslider.setRange(minDate, maxDate);
         this.selectRangeStart = new Date(minDate);
         this.selectRangeEnd = new Date(maxDate);
+        this.forceLoadUnaggregated = forceLoadUnaggregated;
         this.updatePlot(true);
     };
     this.panButton = function(dir) {

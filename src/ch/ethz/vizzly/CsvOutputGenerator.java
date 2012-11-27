@@ -52,7 +52,7 @@ public class CsvOutputGenerator {
      * Log.
      */
     private static Logger log = Logger.getLogger(CsvOutputGenerator.class);
-    
+
     private static final int MAP_GRID_CELL_LENGTH_PIX = 35;
 
     public CsvOutputGenerator() {
@@ -63,15 +63,16 @@ public class CsvOutputGenerator {
      * SensorVizDataSourceServlet when a user requests data.
      */
     public static String getTimedDataCSV(VizzlyView view, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, UserRequestPerformanceMeasurement reqMeas,
-            CacheManager cache, AbstractPerformanceTracker perfTracker, DataReaderRegistry readerRegistry)
-    throws VizzlyException {
+            Double lngSW, Double latNE, Double lngNE, int signalIdx, boolean forceLoadUnaggregated, int canvasWidth, 
+            UserRequestPerformanceMeasurement reqMeas, CacheManager cache, AbstractPerformanceTracker perfTracker, 
+            DataReaderRegistry readerRegistry)
+                    throws VizzlyException {
         if(!cache.isInitialized()) {
             throw new VizzlyException("Cache initialization is ongoing. Please wait.");
         }
-        
+
         AggregationLevelLookup aggregationLookup = AggregationLevelLookup.getInstance();
-        
+
         Vector<VizzlySignal> signals = null;
         if(signalIdx == -1) {
             // Stand-alone time series display: Load all signals
@@ -81,10 +82,10 @@ public class CsvOutputGenerator {
             signals = new Vector<VizzlySignal>();
             signals.add(view.getVisibleSignals().get(signalIdx));
         }
-        
+
         Vector<Boolean> signalIsAvailable = new Vector<Boolean>();
         Vector<Boolean> valuesAreAggregated = new Vector<Boolean>();
-        
+
         // First check if all data is already available in the cache
         for(VizzlySignal s : signals) {
             if(cache.isInCache(s)) {
@@ -96,24 +97,37 @@ public class CsvOutputGenerator {
         if(!signalIsAvailable.contains(true)) {
             throw new VizzlyException("New signal requested. Please come back later.");
         }
-        
+
         ArrayList<Vector<TimedLocationValue>> valuesList = new ArrayList<Vector<TimedLocationValue>>();
-        
+
         SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         Calendar cal = Calendar.getInstance();
-        
-        // If cached, the aggregation window length is the same for all signals
-        reqMeas.setDataFetchStart();
-        int windowLengthSec = AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC;
-        for(int i = 0; i < signals.size(); i++) {
-            if(!signalIsAvailable.get(i)) {
-                continue;
+
+        // The user can enforce to get unaggregated data - check if the request is valid
+        if(forceLoadUnaggregated) {
+            // We support at most 12 hours of unaggregated data to be loaded without checking
+            // the sampling rate
+            // Designed for "now" button that displays the last 12 hours in a timeline plot
+            if(timeFilterEnd-timeFilterStart > 12*3600*1000) {
+                forceLoadUnaggregated = false;
             }
-            VizzlySignal s = signals.get(i);
-            if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
-                int windowLengthThis = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
-                if(windowLengthThis > windowLengthSec) {
-                    windowLengthSec = windowLengthThis;
+        }
+
+        reqMeas.setDataFetchStart();
+        // If cached, the aggregation window length is the same for all signals
+        // The following code determined the largest, common window length
+        int windowLengthSec = AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC;
+        if(!forceLoadUnaggregated) {
+            for(int i = 0; i < signals.size(); i++) {
+                if(!signalIsAvailable.get(i)) {
+                    continue;
+                }
+                VizzlySignal s = signals.get(i);
+                if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
+                    int windowLengthThis = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
+                    if(windowLengthThis > windowLengthSec) {
+                        windowLengthSec = windowLengthThis;
+                    }
                 }
             }
         }
@@ -124,11 +138,11 @@ public class CsvOutputGenerator {
                 continue;
             }
             VizzlySignal s = signals.get(i);
-            // Also do not try to load unaggregated data if the selection if out of bounds
-            if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache) 
+            // Also do not try to load unaggregated data if the selection is out of bounds
+            if(!forceLoadUnaggregated && (!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache) 
                     || timeFilterStart == null || timeFilterEnd == null 
                     || timeFilterStart > cache.getLastPacketTimestamp(s) 
-                    || timeFilterEnd < cache.getFirstPacketTimestamp(s)) {
+                    || timeFilterEnd < cache.getFirstPacketTimestamp(s))) {
                 Boolean ignoreLocation = (latSW == null);
                 Vector<TimedLocationValue> d = cache.getSignalData(s, windowLengthSec, timeFilterStart, timeFilterEnd, ignoreLocation);
                 if(d != null) {
@@ -147,7 +161,7 @@ public class CsvOutputGenerator {
                     valuesAreAggregated.add(null);
                 }
             } else {
-             // Get data directly from original datasource
+                // Get data directly from original datasource
                 AbstractDataReader dr = readerRegistry.getDataReader(s.dataSource.type);
                 // Set 100.000 as row limit for safety reasons, should be much less values
                 long dataFetchStart = System.currentTimeMillis();
@@ -170,15 +184,15 @@ public class CsvOutputGenerator {
                     valuesList.add(null);
                     valuesAreAggregated.add(null);
                 }
-                    
+
             }
         }
         reqMeas.setDataFetchEnd();
-        
+
         if(valuesList.size() == 0) {
             throw new VizzlyException("No data found. Please change your selection, try again later, and contact us if the problem remains.");
         }
-        
+
         // Write CSV header
         StringWriter csvOutput = new StringWriter();
         csvOutput.write("generation_time,");
@@ -189,7 +203,7 @@ public class CsvOutputGenerator {
             }
         }
         csvOutput.write("\n");
-        
+
         // Add line with information on data time span
         long viewStartTime = -1, viewEndTime = -1;
         for(int i = 0; i < signals.size(); i++) {
@@ -199,20 +213,20 @@ public class CsvOutputGenerator {
             VizzlySignal s = signals.get(i);
             Long firstTimestamp = cache.getFirstPacketTimestamp(s);
             Long lastTimestamp = cache.getLastPacketTimestamp(s);
-            
+
             if(firstTimestamp != null) {
                 viewStartTime = (viewStartTime != -1) ? Math.min(viewStartTime, firstTimestamp) : firstTimestamp;
             }
-            
+
             if(lastTimestamp != null) {
                 viewEndTime = Math.max(viewEndTime, lastTimestamp);
             }
-         }
+        }
         //viewEndTime = (viewEndTime > cal.getTimeInMillis()) ? cal.getTimeInMillis() : viewEndTime;
         csvOutput.write("# " + Long.toString(viewStartTime) + ", " + Long.toString(viewEndTime) + "\n");
-        
+
         DecimalFormat df = new DecimalFormat("#.###");
-        
+
         int returnedLines = 0;
         // Output aggregated data first
         if(valuesAreAggregated.contains(true)) {
@@ -276,7 +290,7 @@ public class CsvOutputGenerator {
                 }
             }
         }
-        
+
         // Now output unaggregated data. Dygraph will re-order the overall CSV, if needed.
         if(valuesAreAggregated.contains(false)) {
             String commas = "";
@@ -306,31 +320,31 @@ public class CsvOutputGenerator {
         }
         reqMeas.setNumReturnedLines(returnedLines);
         reqMeas.setNumRequestedSignals(valuesList.size());
-        
+
         return csvOutput.toString();
     }
-    
+
     public static String getAggregationMapCSV(VizzlyView view, Long timeFilterStart, Long timeFilterEnd, Double latSW, Double lngSW, 
             Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, UserRequestPerformanceMeasurement reqMeas,
             CacheManager cache, AbstractPerformanceTracker perfTracker, DataReaderRegistry readerRegistry)
-            throws VizzlyException {
+                    throws VizzlyException {
         if(!cache.isInitialized()) {
             throw new VizzlyException("Cache initialization is ongoing. Please wait.");
         }
-        
+
         StringWriter outWriter = new StringWriter();
         VizzlySignal s = view.getVisibleSignals().get(signalIdx);
         AggregationLevelLookup aggregationLookup = AggregationLevelLookup.getInstance();
-        
+
         if(!cache.isInCache(s)) {
             throw new VizzlyException("New signal requested. Please come back later.");
         }
-    
+
         // Setup map grid for aggregation
         int numRows = new Double(Math.floor((double)canvasHeight/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
         int numCols = new Double(Math.floor((double)canvasWidth/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
         LocationAggregationGrid grid = new LocationAggregationGrid(latSW, lngSW, latNE, lngNE, numRows, numCols);
-        
+
         if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
             // Get data from cache
             int windowLengthSec = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
@@ -362,7 +376,7 @@ public class CsvOutputGenerator {
                 perfTracker.addDataFetchMeasurement(ps);
             }
         }
-        
+
         // Output time bounds
         Long firstTimestamp = cache.getFirstPacketTimestamp(s);
         Long lastTimestamp = cache.getLastPacketTimestamp(s);
@@ -375,14 +389,14 @@ public class CsvOutputGenerator {
             if(aggMap[i] == null) {
                 continue;
             }
-           outWriter.write(aggMap[i].getLocation().latitude + "," + aggMap[i].getLocation().longitude + "," 
-            + df.format(aggMap[i].getAggregatedValue()*s.scaling) + "\n");
-           returnedLines++;
+            outWriter.write(aggMap[i].getLocation().latitude + "," + aggMap[i].getLocation().longitude + "," 
+                    + df.format(aggMap[i].getAggregatedValue()*s.scaling) + "\n");
+            returnedLines++;
         }
-        
+
         reqMeas.setNumReturnedLines(returnedLines);
         reqMeas.setNumRequestedSignals(1);
-        
+
         return outWriter.toString();
     }
 
