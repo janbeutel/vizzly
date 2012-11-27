@@ -17,7 +17,6 @@
 package ch.ethz.vizzly.performance;
 
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
 
 import org.apache.log4j.Logger;
 
@@ -32,16 +31,13 @@ public class DbPerformanceTracker extends AbstractPerformanceTracker {
     /**
      * Log.
      */
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(DbPerformanceTracker.class);
 
     private Vector<DataFetchPerformanceMeasurement> dataFetchMeas = null;
     
     private Vector<UserRequestPerformanceMeasurement> userRequestMeas = null;
 
-    private final Semaphore writeAccessDataFetch = new Semaphore(1);
-    
-    private final Semaphore writeAccessUserRequest = new Semaphore(1);
-    
     private DbPerformanceTrackerPersistenceThread persistenceThread = null;
 
     public DbPerformanceTracker() {
@@ -53,36 +49,24 @@ public class DbPerformanceTracker extends AbstractPerformanceTracker {
 
     /* Data is added to memory first, and then asynchronously copied to the database */
     public void addDataFetchMeasurement(DataFetchPerformanceMeasurement p) {
-        try {
-            writeAccessDataFetch.acquire();
+        synchronized(dataFetchMeas) {
             dataFetchMeas.add(p);
-            writeAccessDataFetch.release();
-        } catch(InterruptedException e) {
-            log.error(e);
         }
     }
-    
+
     /* Data is added to memory first, and then asynchronously copied to the database */
     public void addUserRequestMeasurement(UserRequestPerformanceMeasurement p) {
-        try {
-            writeAccessUserRequest.acquire();
+        synchronized(userRequestMeas) {
             userRequestMeas.add(p);
-            writeAccessUserRequest.release();
-        } catch(InterruptedException e) {
-            log.error(e);
         }
     }
     
     @SuppressWarnings("unchecked")
     public Vector<DataFetchPerformanceMeasurement> copyAndClearDataFetchSamples() {
         Vector<DataFetchPerformanceMeasurement> ret = null;
-        try {
-            writeAccessDataFetch.acquire();
-             ret = (Vector<DataFetchPerformanceMeasurement>)dataFetchMeas.clone();
+        synchronized(dataFetchMeas) {
+            ret = (Vector<DataFetchPerformanceMeasurement>)dataFetchMeas.clone();
             dataFetchMeas.clear();
-            writeAccessDataFetch.release();
-        } catch(InterruptedException e) {
-            log.error(e);
         }
         return ret;
     }
@@ -90,13 +74,9 @@ public class DbPerformanceTracker extends AbstractPerformanceTracker {
     @SuppressWarnings("unchecked")
     public Vector<UserRequestPerformanceMeasurement> copyAndClearUserRequestSamples() {
         Vector<UserRequestPerformanceMeasurement> ret = null;
-        try {
-            writeAccessUserRequest.acquire();
-             ret = (Vector<UserRequestPerformanceMeasurement>)userRequestMeas.clone();
+        synchronized(userRequestMeas) {
+            ret = (Vector<UserRequestPerformanceMeasurement>)userRequestMeas.clone();
             userRequestMeas.clear();
-            writeAccessUserRequest.release();
-        } catch(InterruptedException e) {
-            log.error(e);
         }
         return ret;
     }

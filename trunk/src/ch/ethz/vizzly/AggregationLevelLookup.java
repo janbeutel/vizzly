@@ -168,7 +168,7 @@ public class AggregationLevelLookup {
         }
     }
 
-    private synchronized void loadStateFromFile() {
+    private void loadStateFromFile() {
         FileInputStream fis = null;
         ObjectInputStream o = null;
         synchronized(estimationFileLock) {

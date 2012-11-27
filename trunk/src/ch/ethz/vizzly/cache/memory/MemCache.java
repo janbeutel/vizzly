@@ -18,8 +18,8 @@ package ch.ethz.vizzly.cache.memory;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Vector;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -39,17 +39,17 @@ public class MemCache extends AbstractCache {
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(MemCache.class);
 
-    private ConcurrentHashMap<String, IndexedSignalData> cacheMap = null;
+    private HashMap<String, IndexedSignalData> cacheMap = null;
 
     private Vector<VizzlySignal> seenSignals = null;
 
     private final String description = "MemCache";
-    
+
     /*
      * Init memory cache
      */
     public MemCache() {
-        cacheMap = new ConcurrentHashMap<String, IndexedSignalData>();
+        cacheMap = new HashMap<String, IndexedSignalData>();
         seenSignals = new Vector<VizzlySignal>();
         isInitialized = true;
         dataBackend = DataBackend.MEMCACHE;
@@ -58,7 +58,7 @@ public class MemCache extends AbstractCache {
     public String getCacheDescription() {
         return description;
     }
-    
+
     private IndexedSignalData getCacheEntry(VizzlySignal signal, int windowLengthSec, Boolean updateStats) {
         String identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
         IndexedSignalData s = cacheMap.get(identifier);
@@ -76,7 +76,7 @@ public class MemCache extends AbstractCache {
         }
         return s;
     }
-    
+
     public void updateCacheEntry(VizzlySignal signal, int windowLengthSec, Vector<TimedLocationValue> r) {
         String identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
         IndexedSignalData d = cacheMap.get(identifier);
@@ -95,17 +95,19 @@ public class MemCache extends AbstractCache {
         }
     }
 
-    private synchronized void addCacheEntry(VizzlySignal signal, int windowLengthSec, IndexedSignalData d) {
+    private void addCacheEntry(VizzlySignal signal, int windowLengthSec, IndexedSignalData d) {
         String identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
-        IndexedSignalData c = cacheMap.get(identifier);
-        if(c == null) {
-            if(!cacheMap.containsKey(identifier)) {
-                cacheMap.put(identifier, d);
+        synchronized(cacheMap) {
+            IndexedSignalData c = cacheMap.get(identifier);
+            if(c == null) {
+                if(!cacheMap.containsKey(identifier)) {
+                    cacheMap.put(identifier, d);
+                }
+                addSignal(signal);
             }
-            addSignal(signal);
         }
     }
-    
+
     public Boolean isInCache(VizzlySignal signal, int windowLengthSec) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, false);
         if(d != null) {
@@ -113,7 +115,7 @@ public class MemCache extends AbstractCache {
         }
         return false;
     }
-    
+
     public Long getStartTime(VizzlySignal signal, int windowLengthSec) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, false);
         if(d != null) {
@@ -121,7 +123,7 @@ public class MemCache extends AbstractCache {
         }
         return null;
     }
-    
+
     public Long getEndTime(VizzlySignal signal, int windowLengthSec) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, false);
         if(d != null) {
@@ -129,7 +131,7 @@ public class MemCache extends AbstractCache {
         }
         return null;
     }
-    
+
     public Long getFirstPacketTimestamp(VizzlySignal signal, int windowLengthSec) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, false);
         if(d != null) {
@@ -137,7 +139,7 @@ public class MemCache extends AbstractCache {
         }
         return null;   
     }
-    
+
     public Long getLastPacketTimestamp(VizzlySignal signal, int windowLengthSec) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, false);
         if(d != null) {
@@ -145,7 +147,7 @@ public class MemCache extends AbstractCache {
         }
         return null;
     }
-    
+
     public Date getLastUpdate(VizzlySignal signal, int windowLengthSec) {
         IndexedSignalData d = getCacheEntry(signal, windowLengthSec, false);
         if(d != null) {
@@ -153,7 +155,7 @@ public class MemCache extends AbstractCache {
         }
         return null;
     }
-    
+
     public void addSignal(VizzlySignal signal) {
         synchronized(seenSignals) {
             if(!seenSignals.contains(signal)) {
@@ -169,9 +171,11 @@ public class MemCache extends AbstractCache {
         synchronized(seenSignals) {
             seenSignals.remove(signal);
         }
-        for(String k : cacheMap.keySet()) {
-            if(cacheMap.get(k).getSignal().equals(signal)) {
-                cacheMap.remove(k);
+        synchronized(cacheMap) {
+            for(String k : cacheMap.keySet()) {
+                if(cacheMap.get(k).getSignal().equals(signal)) {
+                    cacheMap.remove(k);
+                }
             }
         }
         return true;
@@ -187,7 +191,7 @@ public class MemCache extends AbstractCache {
         }
         return null;
     }
-    
+
     public Vector<CachedDataInfo> getCachedDataInfo() {
         Vector<CachedDataInfo> ret = new Vector<CachedDataInfo>();
         for(IndexedSignalData d : cacheMap.values()) {
@@ -212,7 +216,7 @@ public class MemCache extends AbstractCache {
     public Vector<VizzlySignal> getSignals() {
         return (Vector<VizzlySignal>)seenSignals.clone();
     }
-    
+
     public long getCacheSize() {
         long total = 0;
         for(IndexedSignalData d : cacheMap.values()) {

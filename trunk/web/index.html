@@ -35,16 +35,16 @@
             {
                 "displayName": "Ozone [ppb]",
                 "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
-				"dataField": "ozone_ppb",
+                "dataField": "ozone_ppb",
                 "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
-				"timeField": "generation_time",
+                "timeField": "generation_time",
                 "scaling": 1.0,
                 "visible": true,
                 "locationLatField": "latitude",
                 "locationLngField": "longitude",
-				"thresholds": [ 18.0, 8.0 ]
+                "thresholds": [ 18.0, 8.0 ]
             }
-	        ]
+            ]
         };
         var aggMap = new AggregationMap(g1Config, document.getElementById("map_canvas"));
    

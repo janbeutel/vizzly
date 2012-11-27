@@ -53,25 +53,27 @@ public class CacheUpdateWorkerSynchronization {
     public CacheUpdateWorkerSynchronization(VizzlyStateContainer vizzlyState) {
         cache = vizzlyState.getCacheManager();
     }
-    
-    public synchronized void startUpdaterThreads(int numWorkers) {
-        if(!threadsStarted) {
-            this.numWorkers = numWorkers;
-            workers = new CacheUpdateWorkerThread[numWorkers];
-            workerSignal = new VizzlySignal[numWorkers];
-            workerCurrentSignalIdx = new int[numWorkers];
-            for(int i = 0; i < workerSignal.length; i++) {
-                workerSignal[i] = null;
-                workerCurrentSignalIdx[i] = 0;
-            }
-            for(int i = 0; i < numWorkers; i++) {
-                if(workers[i] == null || !workers[i].isAlive()) {
-                    workers[i] = new CacheUpdateWorkerThread(i, this, cache);
-                    workers[i].start();
+
+    public void startUpdaterThreads(int numWorkers) {
+        synchronized(threadsStarted) {
+            if(!threadsStarted) {
+                this.numWorkers = numWorkers;
+                workers = new CacheUpdateWorkerThread[numWorkers];
+                workerSignal = new VizzlySignal[numWorkers];
+                workerCurrentSignalIdx = new int[numWorkers];
+                for(int i = 0; i < workerSignal.length; i++) {
+                    workerSignal[i] = null;
+                    workerCurrentSignalIdx[i] = 0;
                 }
+                for(int i = 0; i < numWorkers; i++) {
+                    if(workers[i] == null || !workers[i].isAlive()) {
+                        workers[i] = new CacheUpdateWorkerThread(i, this, cache);
+                        workers[i].start();
+                    }
+                }
+                log.info("Initialization of " + numWorkers + " updater threads done.");
+                threadsStarted = true;
             }
-            log.info("Initialization of " + numWorkers + " updater threads done.");
-            threadsStarted = true;
         }
     }
 

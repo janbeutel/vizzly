@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -59,14 +60,14 @@ public class MySqlDbCache extends AbstractCache {
     private Calendar cal = null;
 
     // For each signal, there is a map that translates the average interval to the cache entry_id
-    private HashMap<VizzlySignal, HashMap<Integer, Integer>> cacheIdLookup = null;
+    private ConcurrentHashMap<VizzlySignal, HashMap<Integer, Integer>> cacheIdLookup = null;
 
     // For being faster, we keep certain (small) information in memory
     private Vector<VizzlySignal> seenSignals = null;
-    private HashMap<VizzlySignal, Integer> seenSignalsEntryIds = null;
-    private HashMap<Integer, MySqlDbCacheMetaEntry> cacheMeta = null;
+    private ConcurrentHashMap<VizzlySignal, Integer> seenSignalsEntryIds = null;
+    private ConcurrentHashMap<Integer, MySqlDbCacheMetaEntry> cacheMeta = null;
 
-    private int nextCacheEntryId = 1;
+    private Integer nextCacheEntryId = 1;
     private int nextSignalId = 1;
 
     final private String description = "MySQLDbCache";
@@ -108,14 +109,11 @@ public class MySqlDbCache extends AbstractCache {
             "PRIMARY KEY (`entry_id`)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 
-    // Used to protect data structures that are kept in memory
-    private Object metaDataLock = new Object();
-
     public MySqlDbCache() {
         seenSignals = new Vector<VizzlySignal>();
-        seenSignalsEntryIds = new HashMap<VizzlySignal, Integer>();
-        cacheMeta = new HashMap<Integer, MySqlDbCacheMetaEntry>();
-        cacheIdLookup = new HashMap<VizzlySignal, HashMap<Integer, Integer>>();
+        seenSignalsEntryIds = new ConcurrentHashMap<VizzlySignal, Integer>();
+        cacheMeta = new ConcurrentHashMap<Integer, MySqlDbCacheMetaEntry>();
+        cacheIdLookup = new ConcurrentHashMap<VizzlySignal, HashMap<Integer, Integer>>();
         dataBackend = DataBackend.MYSQLDBCACHE;
 
         try {
@@ -131,9 +129,7 @@ public class MySqlDbCache extends AbstractCache {
             log.info("Created new database table: " + cacheMetaDataTable);
 
             // Load previous state from DB
-            synchronized(metaDataLock) {
-                initShadowedDataFromDb();
-            }
+            initShadowedDataFromDb();
 
             isInitialized = true;
 
@@ -154,6 +150,7 @@ public class MySqlDbCache extends AbstractCache {
         ResultSet rs = s.executeQuery("SELECT signal_id, ds_type, ds_name, ds_server, data_field, sel_type," +
                 "sel_field, sel_value, time_field, location_lat_field, location_lng_field, agg_function FROM " + 
                 signalsDbTable + " ORDER BY signal_id ASC");
+
         HashMap<Integer,VizzlySignal> signalIdToSignal = new HashMap<Integer,VizzlySignal>();
         while(rs.next()) {
             VizzlySignal sig = new VizzlySignal();
@@ -166,7 +163,9 @@ public class MySqlDbCache extends AbstractCache {
             sig.locationLatField = rs.getString("location_lat_field");
             sig.locationLngField = rs.getString("location_lng_field");
             sig.aggFunction = rs.getString("agg_function");
-            seenSignals.add(sig);
+            synchronized(seenSignals) {
+                seenSignals.add(sig);
+            }
             seenSignalsEntryIds.put(sig, signalId);
             signalIdToSignal.put(signalId, sig);
             nextSignalId = signalId+1;
@@ -208,16 +207,10 @@ public class MySqlDbCache extends AbstractCache {
 
             nextCacheEntryId = entryId+1;
         }
-
         s.close();
         s = null;
         conn.close();
         conn = null;
-    }
-
-    private synchronized int getNextCacheEntryId() {
-        nextCacheEntryId++;
-        return nextCacheEntryId-1;
     }
 
     public void updateCacheEntry(VizzlySignal signal, int windowLengthSec,
@@ -232,7 +225,11 @@ public class MySqlDbCache extends AbstractCache {
         MySqlDbCacheMetaEntry e = null;
         if(!isInCache(signal, windowLengthSec)) {
             try {
-                int nextEntryId = getNextCacheEntryId();
+                int nextEntryId = 0;
+                synchronized(nextCacheEntryId) {
+                    nextEntryId = nextCacheEntryId;
+                    nextCacheEntryId++;
+                }
 
                 Boolean hasLocationData = signal.hasLocation();
                 String locationColumns = "";
@@ -277,21 +274,19 @@ public class MySqlDbCache extends AbstractCache {
                 conn.close();
                 conn = null;
 
-                synchronized(metaDataLock) {
-                    HashMap<Integer, Integer> lookup = cacheIdLookup.get(signal);
-                    if(lookup == null) {
-                        lookup = new HashMap<Integer, Integer>();
-                        cacheIdLookup.put(signal, lookup);
-                    }
-                    lookup.put(windowLengthSec, nextEntryId);
-                    e = new MySqlDbCacheMetaEntry();
-                    e.signal = signal;
-                    e.windowLengthSec = windowLengthSec;
-                    e.startTime = startTime;
-                    e.firstPacketTimestamp = firstPacketTimestamp;
-                    e.hasLocationData = hasLocationData;
-                    cacheMeta.put(nextEntryId, e);
+                HashMap<Integer, Integer> lookup = cacheIdLookup.get(signal);
+                if(lookup == null) {
+                    lookup = new HashMap<Integer, Integer>();
+                    cacheIdLookup.put(signal, lookup);
                 }
+                lookup.put(windowLengthSec, nextEntryId);
+                e = new MySqlDbCacheMetaEntry();
+                e.signal = signal;
+                e.windowLengthSec = windowLengthSec;
+                e.startTime = startTime;
+                e.firstPacketTimestamp = firstPacketTimestamp;
+                e.hasLocationData = hasLocationData;
+                cacheMeta.put(nextEntryId, e);
             } catch(SQLException ex) {
                 log.error(ex);
                 return;
@@ -335,8 +330,9 @@ public class MySqlDbCache extends AbstractCache {
         return ret;
     }
 
+    @SuppressWarnings("unchecked")
     public Vector<VizzlySignal> getSignals() {
-        return seenSignals;
+        return (Vector<VizzlySignal>)(seenSignals.clone());
     }
 
     public Vector<TimedLocationValue> getSignalData(VizzlySignal signal,
@@ -486,41 +482,41 @@ public class MySqlDbCache extends AbstractCache {
         return cacheMeta.get(entryId).lastUpdate;
     }
 
-    public synchronized void addSignal(VizzlySignal signal) {
-        if(seenSignals.contains(signal)) {
-            return;
-        }
-        try {
-            Connection conn = ds.getConnection();
-            conn.setAutoCommit(false);
-            PreparedStatement p = conn.prepareStatement("INSERT INTO " + signalsDbTable + " (signal_id, ds_type, " +
-                    "ds_name, ds_server, data_field, sel_type, sel_field, sel_value, time_field, location_lat_field, " +
-                    "location_lng_field, agg_function) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            p.setInt(1, nextSignalId);
-            p.setString(2, signal.dataSource.type);
-            p.setString(3, signal.dataSource.name);
-            p.setString(4, signal.dataSource.serverAddress);
-            p.setString(5, signal.dataField);
-            p.setString(6, signal.deviceSelect.type);
-            p.setString(7, signal.deviceSelect.field);
-            p.setString(8, signal.deviceSelect.value);
-            p.setString(9, signal.timeField);
-            p.setString(10, signal.locationLatField);
-            p.setString(11, signal.locationLngField);
-            p.setString(12, signal.aggFunction);
-            p.executeUpdate();
-            conn.commit();
-            p.close();
-            p = null;
-            conn.close();
-            conn = null;
-            synchronized(metaDataLock) {
+    public void addSignal(VizzlySignal signal) {
+        synchronized(seenSignals) {
+            if(seenSignals.contains(signal)) {
+                return;
+            }
+            try {
+                Connection conn = ds.getConnection();
+                conn.setAutoCommit(false);
+                PreparedStatement p = conn.prepareStatement("INSERT INTO " + signalsDbTable + " (signal_id, ds_type, " +
+                        "ds_name, ds_server, data_field, sel_type, sel_field, sel_value, time_field, location_lat_field, " +
+                        "location_lng_field, agg_function) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                p.setInt(1, nextSignalId);
+                p.setString(2, signal.dataSource.type);
+                p.setString(3, signal.dataSource.name);
+                p.setString(4, signal.dataSource.serverAddress);
+                p.setString(5, signal.dataField);
+                p.setString(6, signal.deviceSelect.type);
+                p.setString(7, signal.deviceSelect.field);
+                p.setString(8, signal.deviceSelect.value);
+                p.setString(9, signal.timeField);
+                p.setString(10, signal.locationLatField);
+                p.setString(11, signal.locationLngField);
+                p.setString(12, signal.aggFunction);
+                p.executeUpdate();
+                conn.commit();
+                p.close();
+                p = null;
+                conn.close();
+                conn = null;
                 seenSignals.add(signal);
                 seenSignalsEntryIds.put(signal, nextSignalId);
+                nextSignalId++;
+            } catch(SQLException e) {
+                log.error(e);
             }
-            nextSignalId++;
-        } catch(SQLException e) {
-            log.error(e);
         }
     }
 
@@ -532,18 +528,18 @@ public class MySqlDbCache extends AbstractCache {
             // Delete meta data in memory first, data in database afterwards
             HashMap<Integer, Integer> lookupMap = null;
             int signalId = 0;
-            synchronized(metaDataLock) {
+            synchronized(seenSignals) {
                 seenSignals.remove(signal);
-                signalId = seenSignalsEntryIds.get(signal);
-                seenSignalsEntryIds.remove(signal);
+            }
+            signalId = seenSignalsEntryIds.get(signal);
+            seenSignalsEntryIds.remove(signal);
 
-                lookupMap = cacheIdLookup.get(signal);
-                if(lookupMap != null) {
-                    for(Integer i : lookupMap.values()) {
-                        cacheMeta.remove(i);
-                    }
-                    cacheIdLookup.remove(signal);
+            lookupMap = cacheIdLookup.get(signal);
+            if(lookupMap != null) {
+                for(Integer i : lookupMap.values()) {
+                    cacheMeta.remove(i);
                 }
+                cacheIdLookup.remove(signal);
             }
 
             Connection conn = ds.getConnection();
