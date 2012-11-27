@@ -18,8 +18,8 @@ package ch.ethz.vizzly.cache.memory;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -39,7 +39,7 @@ public class MemCache extends AbstractCache {
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(MemCache.class);
 
-    private HashMap<String, IndexedSignalData> cacheMap = null;
+    private ConcurrentHashMap<String, IndexedSignalData> cacheMap = null;
 
     private Vector<VizzlySignal> seenSignals = null;
 
@@ -49,7 +49,7 @@ public class MemCache extends AbstractCache {
      * Init memory cache
      */
     public MemCache() {
-        cacheMap = new HashMap<String, IndexedSignalData>();
+        cacheMap = new ConcurrentHashMap<String, IndexedSignalData>();
         seenSignals = new Vector<VizzlySignal>();
         isInitialized = true;
         dataBackend = DataBackend.MEMCACHE;
@@ -97,14 +97,10 @@ public class MemCache extends AbstractCache {
 
     private void addCacheEntry(VizzlySignal signal, int windowLengthSec, IndexedSignalData d) {
         String identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
-        synchronized(cacheMap) {
-            IndexedSignalData c = cacheMap.get(identifier);
-            if(c == null) {
-                if(!cacheMap.containsKey(identifier)) {
-                    cacheMap.put(identifier, d);
-                }
-                addSignal(signal);
-            }
+        IndexedSignalData c = cacheMap.get(identifier);
+        if(c == null) {
+            cacheMap.putIfAbsent(identifier, d);
+            addSignal(signal);
         }
     }
 
@@ -171,11 +167,9 @@ public class MemCache extends AbstractCache {
         synchronized(seenSignals) {
             seenSignals.remove(signal);
         }
-        synchronized(cacheMap) {
-            for(String k : cacheMap.keySet()) {
-                if(cacheMap.get(k).getSignal().equals(signal)) {
-                    cacheMap.remove(k);
-                }
+        for(String k : cacheMap.keySet()) {
+            if(cacheMap.get(k).getSignal().equals(signal)) {
+                cacheMap.remove(k);
             }
         }
         return true;
@@ -194,22 +188,20 @@ public class MemCache extends AbstractCache {
 
     public Vector<CachedDataInfo> getCachedDataInfo() {
         Vector<CachedDataInfo> ret = new Vector<CachedDataInfo>();
-        synchronized(cacheMap) {
-            for(IndexedSignalData d : cacheMap.values()) {
-                Boolean hasLocationData = false;
-                if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
-                    hasLocationData = true;
-                }
-                Date lastPacketTimestamp = null;
-                if(d.getLastPacketTimestamp() != null) {
-                    Calendar cal = Calendar.getInstance();
-                    cal.setTimeInMillis(d.getLastPacketTimestamp());
-                    lastPacketTimestamp = cal.getTime();    
-                }
-                CachedDataInfo i = new CachedDataInfo(d.getSignal(), d.getAvgInterval(), d.getNumElements(), 
-                        hasLocationData, d.getLastUpdate(), lastPacketTimestamp, d.getHits());
-                ret.add(i);
+        for(IndexedSignalData d : cacheMap.values()) {
+            Boolean hasLocationData = false;
+            if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
+                hasLocationData = true;
             }
+            Date lastPacketTimestamp = null;
+            if(d.getLastPacketTimestamp() != null) {
+                Calendar cal = Calendar.getInstance();
+                cal.setTimeInMillis(d.getLastPacketTimestamp());
+                lastPacketTimestamp = cal.getTime();    
+            }
+            CachedDataInfo i = new CachedDataInfo(d.getSignal(), d.getAvgInterval(), d.getNumElements(), 
+                    hasLocationData, d.getLastUpdate(), lastPacketTimestamp, d.getHits());
+            ret.add(i);
         }
         return ret;
     }
@@ -221,16 +213,14 @@ public class MemCache extends AbstractCache {
 
     public long getCacheSize() {
         long total = 0;
-        synchronized(cacheMap) {
-            for(IndexedSignalData d : cacheMap.values()) {
-                if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
-                    total += d.getNumElements() * 12;
-                } else {
-                    total += d.getNumElements() * 4;
-                }
+        for(IndexedSignalData d : cacheMap.values()) {
+            if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
+                total += d.getNumElements() * 12;
+            } else {
+                total += d.getNumElements() * 4;
             }
-            return total;
         }
+        return total;
     }
 
     public int getNumberOfSeenSignals() {
