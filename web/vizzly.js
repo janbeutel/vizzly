@@ -693,10 +693,10 @@ function SignalSelect(initobject) {
        }
        newElement = document.createElement('span');
        var caption = '(no pos)';
-       if(this.shownSignals[i].position != null && this.shownSignals[i].position != '') {
-           caption = 'Pos '+this.shownSignals[i].position;
-       } else if(this.shownSignals[i].deviceId != null && this.shownSignals[i].deviceId != '') {
-           caption = 'ID '+this.shownSignals[i].deviceId;
+       if(this.shownSignals[i].deviceSelect.type == 'single' && this.shownSignals[i].deviceSelect.field == 'position') {
+           caption = 'Pos '+this.shownSignals[i].deviceSelect.value;
+       } else if(this.shownSignals[i].deviceSelect.type == 'single' && this.shownSignals[i].deviceSelect.field == 'device_id') {
+           caption = 'ID '+this.shownSignals[i].deviceSelect.value;
        }
        $(newElement).text(caption+': ');
        signalDiv.appendChild(newElement);
@@ -975,6 +975,7 @@ function VizzlyDygraph() {
                     zoomCallback: function(minDate, maxDate, yRanges){obj.zoomCallback(minDate, maxDate, yRanges);},
                     clickCallback: function(e, x, pts){obj.clickCallback(e, x, pts);},
                     xAxisLabelWidth: 90,
+                    yAxisLabelWidth: 80,
                     pixelsPerXLabel: 90,
                     xAxisLabelFormatter: function(d, gran){return obj.xAxisFormatter(d, gran)},
                     labelsDiv: this.labelsDiv,
