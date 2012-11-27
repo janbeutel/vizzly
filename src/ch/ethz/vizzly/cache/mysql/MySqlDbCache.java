@@ -25,7 +25,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -69,11 +68,11 @@ public class MySqlDbCache extends AbstractCache {
 
     private int nextCacheEntryId = 1;
     private int nextSignalId = 1;
-    
+
     final private String description = "MySQLDbCache";
 
     final private String tablePrefix = "viz_";
-    
+
     final private String signalsDbTable = tablePrefix + "signals";
 
     final private String signalsDbTableCreate = "CREATE TABLE IF NOT EXISTS " + signalsDbTable + " (" +
@@ -91,7 +90,7 @@ public class MySqlDbCache extends AbstractCache {
             "`agg_function` varchar(10) DEFAULT NULL," +
             "PRIMARY KEY (`signal_id`)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
-    
+
     final private String cacheMetaDataTable = tablePrefix + "metadata";
 
     final private String cacheMetaDataTableCreate = "CREATE TABLE IF NOT EXISTS " + cacheMetaDataTable + " (" +
@@ -110,7 +109,7 @@ public class MySqlDbCache extends AbstractCache {
             ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 
     // Used to protect data structures that are kept in memory
-    private final Semaphore writeAccess = new Semaphore(1);
+    private Object metaDataLock = new Object();
 
     public MySqlDbCache() {
         seenSignals = new Vector<VizzlySignal>();
@@ -118,23 +117,23 @@ public class MySqlDbCache extends AbstractCache {
         cacheMeta = new HashMap<Integer, MySqlDbCacheMetaEntry>();
         cacheIdLookup = new HashMap<VizzlySignal, HashMap<Integer, Integer>>();
         dataBackend = DataBackend.MYSQLDBCACHE;
-        
+
         try {
 
             InitialContext ctx = new InitialContext();
             // Perform JNDI lookup - database connection is configured in contexts/sensorviz.xml
             ds = (DataSource)ctx.lookup("java:comp/env/jdbc/VizzlyDS");
-            
+
             // Create tables for managing structure
             sqlExecuteSimpleQuery(signalsDbTableCreate);
             log.info("Created new database table: " + signalsDbTable);
             sqlExecuteSimpleQuery(cacheMetaDataTableCreate);
             log.info("Created new database table: " + cacheMetaDataTable);
-            
+
             // Load previous state from DB
-            writeAccess.acquire();
-            initShadowedDataFromDb();
-            writeAccess.release();
+            synchronized(metaDataLock) {
+                initShadowedDataFromDb();
+            }
 
             isInitialized = true;
 
@@ -142,11 +141,9 @@ public class MySqlDbCache extends AbstractCache {
             log.error("Failed to connect to database server.", e);
         } catch(SQLException e) {
             log.error(e);
-        } catch(InterruptedException e) {
-            log.error(e);
         }
     }
-    
+
     public String getCacheDescription() {
         return description;
     }
@@ -155,13 +152,13 @@ public class MySqlDbCache extends AbstractCache {
         Connection conn = ds.getConnection();
         Statement s = conn.createStatement();
         ResultSet rs = s.executeQuery("SELECT signal_id, ds_type, ds_name, ds_server, data_field, sel_type," +
-        		"sel_field, sel_value, time_field, location_lat_field, location_lng_field, agg_function FROM " + 
+                "sel_field, sel_value, time_field, location_lat_field, location_lng_field, agg_function FROM " + 
                 signalsDbTable + " ORDER BY signal_id ASC");
         HashMap<Integer,VizzlySignal> signalIdToSignal = new HashMap<Integer,VizzlySignal>();
         while(rs.next()) {
             VizzlySignal sig = new VizzlySignal();
             int signalId = rs.getInt("signal_id");
-            
+
             sig.dataSource = new VizzlySignal.DataSource(rs.getString("ds_type"), rs.getString("ds_name"), rs.getString("ds_server"));
             sig.dataField = rs.getString("data_field");
             sig.deviceSelect = new VizzlySignal.DeviceSelect(rs.getString("sel_type"), rs.getString("sel_field"), rs.getString("sel_value"));
@@ -208,10 +205,10 @@ public class MySqlDbCache extends AbstractCache {
                 cacheIdLookup.put(sig, lookupTable);
             }
             lookupTable.put(e.windowLengthSec, entryId);
-            
+
             nextCacheEntryId = entryId+1;
         }
-        
+
         s.close();
         s = null;
         conn.close();
@@ -255,7 +252,7 @@ public class MySqlDbCache extends AbstractCache {
                         ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
                 sqlExecuteSimpleQuery(sql);
                 log.info("Created new database table: " + tableName);
-                
+
                 // r is ordered by ASCENDING time
                 Long startTime = TimestampTruncateUtil.truncate(r.firstElement().timestamp, windowLengthSec*1000);
                 Long firstPacketTimestamp = r.firstElement().timestamp;
@@ -279,26 +276,23 @@ public class MySqlDbCache extends AbstractCache {
                 p = null;
                 conn.close();
                 conn = null;
-                
-                writeAccess.acquire();
-                HashMap<Integer, Integer> lookup = cacheIdLookup.get(signal);
-                if(lookup == null) {
-                    lookup = new HashMap<Integer, Integer>();
-                    cacheIdLookup.put(signal, lookup);
+
+                synchronized(metaDataLock) {
+                    HashMap<Integer, Integer> lookup = cacheIdLookup.get(signal);
+                    if(lookup == null) {
+                        lookup = new HashMap<Integer, Integer>();
+                        cacheIdLookup.put(signal, lookup);
+                    }
+                    lookup.put(windowLengthSec, nextEntryId);
+                    e = new MySqlDbCacheMetaEntry();
+                    e.signal = signal;
+                    e.windowLengthSec = windowLengthSec;
+                    e.startTime = startTime;
+                    e.firstPacketTimestamp = firstPacketTimestamp;
+                    e.hasLocationData = hasLocationData;
+                    cacheMeta.put(nextEntryId, e);
                 }
-                lookup.put(windowLengthSec, nextEntryId);
-                e = new MySqlDbCacheMetaEntry();
-                e.signal = signal;
-                e.windowLengthSec = windowLengthSec;
-                e.startTime = startTime;
-                e.firstPacketTimestamp = firstPacketTimestamp;
-                e.hasLocationData = hasLocationData;
-                cacheMeta.put(nextEntryId, e);
-                writeAccess.release();
             } catch(SQLException ex) {
-                log.error(ex);
-                return;
-            } catch(InterruptedException ex) {
                 log.error(ex);
                 return;
             }
@@ -497,11 +491,10 @@ public class MySqlDbCache extends AbstractCache {
             return;
         }
         try {
-            writeAccess.acquire();
             Connection conn = ds.getConnection();
             conn.setAutoCommit(false);
             PreparedStatement p = conn.prepareStatement("INSERT INTO " + signalsDbTable + " (signal_id, ds_type, " +
-            		"ds_name, ds_server, data_field, sel_type, sel_field, sel_value, time_field, location_lat_field, " +
+                    "ds_name, ds_server, data_field, sel_type, sel_field, sel_value, time_field, location_lat_field, " +
                     "location_lng_field, agg_function) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             p.setInt(1, nextSignalId);
             p.setString(2, signal.dataSource.type);
@@ -521,16 +514,13 @@ public class MySqlDbCache extends AbstractCache {
             p = null;
             conn.close();
             conn = null;
-            seenSignals.add(signal);
-            seenSignalsEntryIds.put(signal, nextSignalId);
-            writeAccess.release();
+            synchronized(metaDataLock) {
+                seenSignals.add(signal);
+                seenSignalsEntryIds.put(signal, nextSignalId);
+            }
             nextSignalId++;
         } catch(SQLException e) {
             log.error(e);
-        } catch(InterruptedException e) {
-            log.error(e);
-        } finally {
-            writeAccess.release();
         }
     }
 
@@ -540,19 +530,21 @@ public class MySqlDbCache extends AbstractCache {
         }
         try {
             // Delete meta data in memory first, data in database afterwards
-            writeAccess.acquire();
-            seenSignals.remove(signal);
-            int signalId = seenSignalsEntryIds.get(signal);
-            seenSignalsEntryIds.remove(signal);
+            HashMap<Integer, Integer> lookupMap = null;
+            int signalId = 0;
+            synchronized(metaDataLock) {
+                seenSignals.remove(signal);
+                signalId = seenSignalsEntryIds.get(signal);
+                seenSignalsEntryIds.remove(signal);
 
-            HashMap<Integer, Integer> lookupMap = cacheIdLookup.get(signal);
-            if(lookupMap != null) {
-                for(Integer i : lookupMap.values()) {
-                    cacheMeta.remove(i);
+                lookupMap = cacheIdLookup.get(signal);
+                if(lookupMap != null) {
+                    for(Integer i : lookupMap.values()) {
+                        cacheMeta.remove(i);
+                    }
+                    cacheIdLookup.remove(signal);
                 }
-                cacheIdLookup.remove(signal);
             }
-            writeAccess.release();
 
             Connection conn = ds.getConnection();
             PreparedStatement p = conn.prepareStatement("DELETE FROM " + cacheMetaDataTable + " WHERE signal_id = ?");
@@ -575,8 +567,6 @@ public class MySqlDbCache extends AbstractCache {
             conn.close();
             conn = null;
         } catch(SQLException e) {
-            log.error(e);
-        } catch(InterruptedException e) {
             log.error(e);
         }
         return true;
@@ -613,7 +603,7 @@ public class MySqlDbCache extends AbstractCache {
                 return;
             }
             MySqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId); 
-            
+
             // First step: Pre-aggregate new data
             Vector<TimedValue> aggregatedData = DataAggregationUtil.aggregateData(data, windowLengthSec);
 
@@ -631,7 +621,7 @@ public class MySqlDbCache extends AbstractCache {
             p.executeUpdate();
             conn.commit();
             p.close();
-            
+
             p = conn.prepareStatement("INSERT INTO " + tableName + " (timeIdx, value) VALUES (?, ?)");
 
             // Third step: Add new data
@@ -673,15 +663,15 @@ public class MySqlDbCache extends AbstractCache {
                 return;
             }
             MySqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId); 
-            
+
             // First step: Pre-aggregate new data
             Vector<TimedLocationValue> aggregatedData = DataAggregationUtil.aggregateDataWithLocation(data, windowLengthSec);
-       
+
             if(aggregatedData.size() == 0) {
                 log.debug("Empty aggregated data.");
                 return;
             }
-            
+
             // Second step: Clean-up previously filled, overlapping data
             Connection conn = ds.getConnection();
             conn.setAutoCommit(false);
@@ -691,9 +681,9 @@ public class MySqlDbCache extends AbstractCache {
             p.executeUpdate();
             conn.commit();
             p.close();
-            
+
             p = conn.prepareStatement("INSERT INTO " + tableName + " (timeIdx, value, " +
-            		"location_lat, location_lng) VALUES (?, ?, ?, ?)");
+                    "location_lat, location_lng) VALUES (?, ?, ?, ?)");
 
             // Third step: Add new data
             for(int i = 0; i < aggregatedData.size(); i++) {
@@ -757,7 +747,7 @@ public class MySqlDbCache extends AbstractCache {
         conn.close();
         conn = null;
     }
-    
+
     private int getTimeIdx(long timestamp, long startTime, int windowLengthSec) {
         long windowLengthSecMilli = (long)windowLengthSec*1000;
         long diff = timestamp-startTime;
@@ -766,7 +756,7 @@ public class MySqlDbCache extends AbstractCache {
         Double idx = Math.floor(t/i);
         return idx.intValue();
     }
-    
+
     private long getTimestamp(int timeIdx, long startTime, int windowLengthSec) {
         long windowLengthMilli = (long)windowLengthSec*1000;
         long timestamp = startTime+(long)timeIdx*windowLengthMilli;

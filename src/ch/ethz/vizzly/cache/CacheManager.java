@@ -61,8 +61,6 @@ public class CacheManager {
     
     private DataReaderRegistry dataReaderRegistry = null;
     
-    private Object removeSignalLock = new Object();
-    
     public CacheManager(Vector<CacheConfiguration> caches, DataReaderRegistry dataReaderRegistry, AbstractPerformanceTracker perfTracker) {
         this.caches = caches;
         this.dataReaderRegistry = dataReaderRegistry;
@@ -228,7 +226,7 @@ public class CacheManager {
     }
     
     public void scheduleSignalForRemoval(VizzlySignal signal) {
-        synchronized(removeSignalLock) {
+        synchronized(signalsToRemove) {
             if(!signalsToRemove.contains(signal)) {
                 signalsToRemove.add(signal);
             }
@@ -242,7 +240,7 @@ public class CacheManager {
         }
         AggregationLevelLookup.getInstance().deleteSignalEstimation(signal);
         if(removeSuccessful) {
-            synchronized(removeSignalLock) {
+            synchronized(signalsToRemove) {
                 signalsToRemove.remove(signal);
             }
         }
@@ -250,7 +248,7 @@ public class CacheManager {
     
     // Called from web page to show the users that there are pending requests
     public Vector<VizzlySignal> getSignalsToRemove() {
-        synchronized(removeSignalLock) {
+        synchronized(signalsToRemove) {
             return signalsToRemove;
         }
     }
