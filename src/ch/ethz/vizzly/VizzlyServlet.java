@@ -114,6 +114,14 @@ public class VizzlyServlet extends HttpServlet {
             log.error(e.getLocalizedMessage());
         }
 
+        // Check if the user sent a valid request
+        if(statsParam == null && heatMapParam == null) {
+            if(viewConfigParam == null && jsonReq.length() == 0) {
+                returnErrorMessage("Invalid request. Please specify valid signals", resp);
+                return;
+            }
+        }
+        
         // Convert JSON into Java object
         Gson gson = new Gson();
         VizzlyView viewConfig = null;
@@ -123,6 +131,14 @@ public class VizzlyServlet extends HttpServlet {
         } else {
             // From POST contents
             viewConfig = gson.fromJson(jsonReq.toString(), VizzlyView.class);
+        }
+        
+        // Check if anything useful was included
+        if(statsParam == null && heatMapParam == null) {
+            if(viewConfig == null || viewConfig.signals == null) {
+                returnErrorMessage("Invalid request. Please specify valid signals", resp);
+                return;
+            }
         }
 
         if(viewConfig != null) {
