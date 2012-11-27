@@ -253,6 +253,7 @@ public class MySqlDbCache extends AbstractCache {
                 // r is ordered by ASCENDING time
                 Long startTime = TimestampTruncateUtil.truncate(r.firstElement().timestamp, windowLengthSec*1000);
                 Long firstPacketTimestamp = r.firstElement().timestamp;
+                Long lastPacketTimestamp = r.lastElement().timestamp;
 
                 Connection conn = ds.getConnection();
                 PreparedStatement p = conn.prepareStatement("INSERT INTO " + cacheMetaDataTable + 
@@ -285,6 +286,7 @@ public class MySqlDbCache extends AbstractCache {
                 e.windowLengthSec = windowLengthSec;
                 e.startTime = startTime;
                 e.firstPacketTimestamp = firstPacketTimestamp;
+                e.lastPacketTimestamp = lastPacketTimestamp;
                 e.hasLocationData = hasLocationData;
                 cacheMeta.put(nextEntryId, e);
             } catch(SQLException ex) {
