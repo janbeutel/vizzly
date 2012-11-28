@@ -223,7 +223,7 @@ public class MySqlDbCache extends AbstractCache {
             return;
         }
         MySqlDbCacheMetaEntry e = null;
-        if(!isInCache(signal, windowLengthSec)) {
+        if(!isInCacheIgnoreData(signal, windowLengthSec)) {
             try {
                 int nextEntryId = 0;
                 synchronized(nextCacheEntryId) {
@@ -423,6 +423,19 @@ public class MySqlDbCache extends AbstractCache {
     }
 
     public Boolean isInCache(VizzlySignal signal, int windowLengthSec) {
+        HashMap<Integer, Integer> lookupMap = cacheIdLookup.get(signal);
+        if(lookupMap != null) {
+            Integer entryId = lookupMap.get(windowLengthSec);
+            if(entryId != null) {
+                if(cacheMeta.get(entryId) != null && cacheMeta.get(entryId).lastUpdate != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    private Boolean isInCacheIgnoreData(VizzlySignal signal, int windowLengthSec) {
         HashMap<Integer, Integer> lookupMap = cacheIdLookup.get(signal);
         if(lookupMap != null) {
             Integer entryId = lookupMap.get(windowLengthSec);
