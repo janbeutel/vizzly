@@ -151,7 +151,6 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 <% } %>
 <hr />
 <div id="footer">
-$Id$<br/>
 &copy; 2012 Computer Engineering and Networks Laboratory, ETH Zurich<br/>
 Vizzly is free open-source software: <a href="https://code.google.com/p/vizzly">https://code.google.com/p/vizzly</a><br/>
 </div>   
