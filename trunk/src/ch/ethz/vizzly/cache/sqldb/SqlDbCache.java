@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.cache.mysql;
+package ch.ethz.vizzly.cache.sqldb;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -43,17 +43,17 @@ import ch.ethz.vizzly.util.DataAggregationUtil;
 import ch.ethz.vizzly.util.TimestampTruncateUtil;
 
 /**
- * This class implements a cache that stores all data in a MySQL database.
+ * This class implements a cache that stores all data in a SQL database.
  * For faster access, meta data is also hold in memory.
  * @author Matthias Keller
  *
  */
-public class MySqlDbCache extends AbstractCache {
+public class SqlDbCache extends AbstractCache {
 
     /**
      * Log.
      */
-    private static Logger log = Logger.getLogger(MySqlDbCache.class);
+    private static Logger log = Logger.getLogger(SqlDbCache.class);
 
     private DataSource ds = null;
 
@@ -65,12 +65,12 @@ public class MySqlDbCache extends AbstractCache {
     // For being faster, we keep certain (small) information in memory
     private Vector<VizzlySignal> seenSignals = null;
     private ConcurrentHashMap<VizzlySignal, Integer> seenSignalsEntryIds = null;
-    private ConcurrentHashMap<Integer, MySqlDbCacheMetaEntry> cacheMeta = null;
+    private ConcurrentHashMap<Integer, SqlDbCacheMetaEntry> cacheMeta = null;
 
     private Integer nextCacheEntryId = 1;
     private int nextSignalId = 1;
 
-    final private String description = "MySQLDbCache";
+    final private String description = "SqlDbCache";
 
     final private String tablePrefix = "viz_";
 
@@ -109,10 +109,10 @@ public class MySqlDbCache extends AbstractCache {
             "PRIMARY KEY (`entry_id`)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 
-    public MySqlDbCache() {
+    public SqlDbCache() {
         seenSignals = new Vector<VizzlySignal>();
         seenSignalsEntryIds = new ConcurrentHashMap<VizzlySignal, Integer>();
-        cacheMeta = new ConcurrentHashMap<Integer, MySqlDbCacheMetaEntry>();
+        cacheMeta = new ConcurrentHashMap<Integer, SqlDbCacheMetaEntry>();
         cacheIdLookup = new ConcurrentHashMap<VizzlySignal, HashMap<Integer, Integer>>();
         dataBackend = DataBackend.MYSQLDBCACHE;
 
@@ -184,7 +184,7 @@ public class MySqlDbCache extends AbstractCache {
                 log.error("DB inconsistency, signal_id " + signalId + " not found in signals table.");
                 continue;
             }
-            MySqlDbCacheMetaEntry e = new MySqlDbCacheMetaEntry();
+            SqlDbCacheMetaEntry e = new SqlDbCacheMetaEntry();
             e.signal = sig;
             e.windowLengthSec =  rs.getInt("window_length");
             e.hasLocationData = (rs.getInt("has_location_data") == 1) ? true : false;
@@ -222,7 +222,7 @@ public class MySqlDbCache extends AbstractCache {
         if(r.size() == 0) {
             return;
         }
-        MySqlDbCacheMetaEntry e = null;
+        SqlDbCacheMetaEntry e = null;
         if(!isInCacheIgnoreData(signal, windowLengthSec)) {
             try {
                 int nextEntryId = 0;
@@ -281,7 +281,7 @@ public class MySqlDbCache extends AbstractCache {
                     cacheIdLookup.put(signal, lookup);
                 }
                 lookup.put(windowLengthSec, nextEntryId);
-                e = new MySqlDbCacheMetaEntry();
+                e = new SqlDbCacheMetaEntry();
                 e.signal = signal;
                 e.windowLengthSec = windowLengthSec;
                 e.startTime = startTime;
@@ -318,7 +318,7 @@ public class MySqlDbCache extends AbstractCache {
 
     public Vector<CachedDataInfo> getCachedDataInfo() {
         Vector<CachedDataInfo> ret = new Vector<CachedDataInfo>();
-        for(MySqlDbCacheMetaEntry e : cacheMeta.values()) {
+        for(SqlDbCacheMetaEntry e : cacheMeta.values()) {
             Date lastPacketTimestamp = null;
             if(e.lastPacketTimestamp != null) {
                 cal = Calendar.getInstance();
@@ -387,7 +387,7 @@ public class MySqlDbCache extends AbstractCache {
 
                 Vector<TimedLocationValue> ret = new Vector<TimedLocationValue>();
                 ResultSet rs = p.executeQuery();
-                MySqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId);
+                SqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId);
                 while(rs.next()) {
                     int timeIdx = rs.getInt(1);
                     double value = rs.getDouble(2);
@@ -585,7 +585,7 @@ public class MySqlDbCache extends AbstractCache {
 
     public long getCacheSize() {
         long total = 0;
-        for(MySqlDbCacheMetaEntry e : cacheMeta.values()) {
+        for(SqlDbCacheMetaEntry e : cacheMeta.values()) {
             if(e.hasLocationData) {
                 total += e.numElements * 12;
             } else {
@@ -613,7 +613,7 @@ public class MySqlDbCache extends AbstractCache {
                 log.error("DB inconsistency, no cache entry found.");
                 return;
             }
-            MySqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId); 
+            SqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId); 
 
             // First step: Pre-aggregate new data
             Vector<TimedValue> aggregatedData = DataAggregationUtil.aggregateData(data, windowLengthSec);
@@ -673,7 +673,7 @@ public class MySqlDbCache extends AbstractCache {
                 log.error("DB inconsistency, no cache entry found.");
                 return;
             }
-            MySqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId); 
+            SqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId); 
 
             // First step: Pre-aggregate new data
             Vector<TimedLocationValue> aggregatedData = DataAggregationUtil.aggregateDataWithLocation(data, windowLengthSec);
@@ -730,7 +730,7 @@ public class MySqlDbCache extends AbstractCache {
         PreparedStatement p = conn.prepareStatement("UPDATE " + cacheMetaDataTable + 
                 " SET end_time = ?, last_packet_timestamp = ?, last_update = ?, num_elements = ?, hits = ? WHERE entry_id = ?");
         int cacheEntryId = getCacheEntryId(signal, windowLengthSec);
-        MySqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId);
+        SqlDbCacheMetaEntry e = cacheMeta.get(cacheEntryId);
         p.setLong(1, e.endTime);
         p.setLong(2, e.lastPacketTimestamp);
         p.setLong(3, e.lastUpdate.getTime());
