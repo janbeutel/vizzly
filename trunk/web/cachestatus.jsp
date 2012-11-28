@@ -1,17 +1,18 @@
-<%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
+<%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,
+    java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
 <html><head>
 <title>Vizzly Cache Status</title>
 <style type="text/css">
 h3 { font-family: Verdana, Helvetica, sans-serif; font-size:14px; }
 body, p, td { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
 a.white { color:#ffffff; }
-#footer { font-style: italic; }
+#footer, td.it { font-style: italic; }
 </style>
 </head>
 <body bgcolor="#FFFFFF">
 <%
 VizzlyStateContainer vizzlyState = 
-        (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
+    (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
 CacheManager cacheManager = vizzlyState.getCacheManager();
 
 // Generate text representation of current uptime
@@ -28,7 +29,6 @@ uptime %= HOUR;
 uptimeText.append(uptime / MINUTE).append(" minutes ");
 uptime %= MINUTE;
 uptimeText.append(uptime / SECOND).append(" seconds ");
-uptime %= SECOND;
 
 %>
 <h3>Cache Status</h3>
@@ -51,6 +51,42 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 %>
 </table>
 </p>
+<h3>Update Worker Status</h3>
+<%
+CacheUpdateWorkerSynchronization workerSync = (CacheUpdateWorkerSynchronization)application
+    .getAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY);
+VizzlySignal[] workerSignals = workerSync.getWorkerSignals();
+%>
+<p>
+<table style="border: 1px solid #000000;">
+    <tr style="background-color: #000000; color: #ffffff; font-weight: bold">
+        <td width="30">#</td>
+        <td width="300">PROCESSED SIGNAL</td>
+    </tr>
+<%
+for(int i = 0; i < workerSignals.length; i++) {
+%>
+    <tr>
+        <td><%=i%></td>
+<%
+    if(workerSignals[i] != null) {
+%>
+        <td><%=workerSignals[i].getUniqueIdentifier()%></td>
+<%
+    } else {
+%>
+        <td class="it">Sleeping</td>
+<%
+    }
+%>
+    </tr>
+<%
+}
+%>    
+</table>
+</p>
+
+
 <%
 // Process signal removal requests
 if(request.getParameter("remove") != null) {
