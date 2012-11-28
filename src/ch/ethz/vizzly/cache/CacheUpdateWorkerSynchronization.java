@@ -31,6 +31,8 @@ import ch.ethz.vizzly.datatype.VizzlySignal;
  */
 public class CacheUpdateWorkerSynchronization {
 
+    public static final String SERVLET_ATTRIB_KEY = "workerSync";
+    
     private CacheManager cache = null;
 
     private VizzlySignal[] workerSignal = null;
@@ -147,6 +149,10 @@ public class CacheUpdateWorkerSynchronization {
             workers[i].setRunning(false);
             workers[i].interrupt();
         }
+    }
+    
+    public VizzlySignal[] getWorkerSignals() {
+        return (VizzlySignal[])workerSignal.clone();
     }
 
 }

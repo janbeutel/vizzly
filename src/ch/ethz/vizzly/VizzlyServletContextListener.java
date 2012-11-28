@@ -50,7 +50,7 @@ public class VizzlyServletContextListener implements ServletContextListener {
         
         // Initialize cache
         CacheUpdateWorkerSynchronization workerSync = new CacheUpdateWorkerSynchronization(vizzlyState);
-        sce.getServletContext().setAttribute("workerSync", workerSync);
+        sce.getServletContext().setAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY, workerSync);
         workerSync.startUpdaterThreads(NUM_UPDATE_WORKERS);
         
         log.info("Vizzly started successfully.");
@@ -59,10 +59,12 @@ public class VizzlyServletContextListener implements ServletContextListener {
     public void contextDestroyed(ServletContextEvent sce){
         try {
             // Properly shutdown performance tracker persistence thread
-            VizzlyStateContainer vizzlyState = (VizzlyStateContainer)sce.getServletContext().getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
+            VizzlyStateContainer vizzlyState = (VizzlyStateContainer)sce.getServletContext()
+                    .getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
             vizzlyState.getPerformanceTracker().stopApplication();
             // Stop updater threads
-            CacheUpdateWorkerSynchronization workerSync = (CacheUpdateWorkerSynchronization)sce.getServletContext().getAttribute("workerSync");
+            CacheUpdateWorkerSynchronization workerSync = (CacheUpdateWorkerSynchronization)sce
+                    .getServletContext().getAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY);
             workerSync.terminateThreads();
         } catch (Exception ex) {
         }

@@ -1,3 +1,5 @@
 #!/bin/bash
 
-screen -S sensorviz java -Xmx512m -jar start.jar
+#export JAVA_HOME=
+#export PATH=
+screen -S vizzly java -Xmx256m -jar start.jar
