@@ -215,9 +215,9 @@ public class MemCache extends AbstractCache {
         long total = 0;
         for(IndexedSignalData d : cacheMap.values()) {
             if(d instanceof ch.ethz.vizzly.cache.memory.IndexedSignalLocationData) {
-                total += d.getNumElements() * 12;
+                total += d.getNumElements() * 24;
             } else {
-                total += d.getNumElements() * 4;
+                total += d.getNumElements() * 8;
             }
         }
         return total;
