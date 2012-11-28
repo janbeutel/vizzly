@@ -84,8 +84,8 @@ public class VizzlyStateContainer {
             caches.add(new CacheConfiguration(memCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC*4));
             
             // Can only be activated when proper data source has been configured beforehand
-            //MySqlDbCache mysqlDbCache = new MySqlDbCache();
-            //caches.add(new CacheConfiguration(mysqlDbCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC));
+            //SqlDbCache sqlDbCache = new SqlDbCache();
+            //caches.add(new CacheConfiguration(sqlDbCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC));
 
             // TODO: Order caches by ascending window length
             cacheManager = new CacheManager(caches, dataReaderRegistry, perfTracker);

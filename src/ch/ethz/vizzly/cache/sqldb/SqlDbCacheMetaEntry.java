@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.cache.mysql;
+package ch.ethz.vizzly.cache.sqldb;
 
 import java.util.Date;
 
@@ -26,7 +26,7 @@ import ch.ethz.vizzly.datatype.VizzlySignal;
  * @author Matthias Keller
  *
  */
-public class MySqlDbCacheMetaEntry {
+public class SqlDbCacheMetaEntry {
     
     public VizzlySignal signal = null;
     public int windowLengthSec = 0;
