@@ -1,22 +1,58 @@
-<%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat" %>
+<%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
 <html><head>
 <title>Vizzly Cache Status</title>
 <style type="text/css">
 h3 { font-family: Verdana, Helvetica, sans-serif; font-size:14px; }
-p, td { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
-a { color:#ffffff; }
+body, p, td { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
+a.white { color:#ffffff; }
+#footer { font-style: italic; }
 </style>
 </head>
 <body bgcolor="#FFFFFF">
 <%
-
 VizzlyStateContainer vizzlyState = 
         (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
 CacheManager cacheManager = vizzlyState.getCacheManager();
 
+// Generate text representation of current uptime
+long uptime = cacheManager.getUptime(cacheManager.getNumberOfCaches()-1);
+int SECOND = 1000;
+int MINUTE = 60 * SECOND;
+int HOUR = 60 * MINUTE;
+int DAY = 24 * HOUR;
+StringBuffer uptimeText = new StringBuffer("");
+uptimeText.append(uptime / DAY).append(" days ");
+uptime %= DAY;
+uptimeText.append(uptime / HOUR).append(" hours ");
+uptime %= HOUR;
+uptimeText.append(uptime / MINUTE).append(" minutes ");
+uptime %= MINUTE;
+uptimeText.append(uptime / SECOND).append(" seconds ");
+uptime %= SECOND;
+
+%>
+<h3>Cache Status</h3>
+<p>
+<table style="border: 0px;">
+<tr><td width="250">Uptime:</td><td><%=uptimeText.toString()%></tr>
+<%
+for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
+%>
+<tr><td><%=cacheManager.getCacheDescription(i)%> Cache Size:</td><td><%=cacheManager.getCacheSize(i)%></tr>
+<tr><td><%=cacheManager.getCacheDescription(i)%> # of Cache Entries:</td><td><%=cacheManager.getNumberOfCacheEntries(i)%></tr>
+<tr><td><%=cacheManager.getCacheDescription(i)%> # of Seen Signals:</td><td><%=cacheManager.getNumberOfSeenSignals(i)%></tr>
+<tr><td><%=cacheManager.getCacheDescription(i)%> # of Requests:</td><td><%=cacheManager.getNumberOfCacheRequests(i)%></tr>
+<tr><td><%=cacheManager.getCacheDescription(i)%> # of Hits:</td><td><%=cacheManager.getNumberOfCacheHits(i)%></tr>
+<tr><td><%=cacheManager.getCacheDescription(i)%> # of Misses:</td><td><%=cacheManager.getNumberOfCacheMisses(i)%></tr>
+<%
+}
+%>
+</table>
+</p>
+<%
 // Process signal removal requests
 if(request.getParameter("remove") != null) {
-    for(VizzlySignal s : cacheManager.getSignals(0)) {
+    for(VizzlySignal s : cacheManager.getSignals(cacheManager.getNumberOfCaches()-1)) {
         if(s.getUniqueIdentifier().equals(request.getParameter("remove"))) {
             cacheManager.scheduleSignalForRemoval(s);
         }   
@@ -63,16 +99,16 @@ SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
 for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 %>
-<h3><%=cacheManager.getCacheDescription(i)%></h3>
+<h3><%=cacheManager.getCacheDescription(i)%> Cache Contents</h3>
 <table style="border: 1px solid #000000;">
 <tr style="background-color: #000000; color: #ffffff; font-weight: bold">
-    <td><a href="?s=NAME">SIGNAL NAME</a></td>
-    <td><a href="?s=WINDOW_LENGTH">WIN LEN.</a></td>
-    <td><a href="?s=NUM_ELEMENTS"># ROWS</a></td>
-    <td><a href="?s=HAS_LOCATION_DATA">LOC</a></td>
-    <td width="160"><a href="?s=LAST_PACKET_TIMESTAMP">LAST TIMESTAMP</a></td>
-    <td width="160"><a href="?s=LAST_UPDATE">LAST UPDATE</a></td>
-    <td><a href="?s=HITS">HITS</a></td>
+    <td><a class="white" href="?s=NAME">SIGNAL NAME</a></td>
+    <td><a class="white" href="?s=WINDOW_LENGTH">WIN LEN.</a></td>
+    <td><a class="white" href="?s=NUM_ELEMENTS"># ROWS</a></td>
+    <td><a class="white" href="?s=HAS_LOCATION_DATA">LOC</a></td>
+    <td width="160"><a class="white" href="?s=LAST_PACKET_TIMESTAMP">LAST TIMESTAMP</a></td>
+    <td width="160"><a class="white" href="?s=LAST_UPDATE">LAST UPDATE</a></td>
+    <td><a class="white" href="?s=HITS">HITS</a></td>
     <td>DEL</td>
 </tr>
 <%
@@ -112,6 +148,12 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
     </tr>
 </table>
 <p>&nbsp;</p>
-<% } %>    
+<% } %>
+<hr />
+<div id="footer">
+$Id$<br/>
+&copy; 2012 Computer Engineering and Networks Laboratory, ETH Zurich<br/>
+Vizzly is free open-source software: <a href="https://code.google.com/p/vizzly">https://code.google.com/p/vizzly</a><br/>
+</div>   
 </body>
 </html>
