@@ -37,8 +37,10 @@ uptime %= SECOND;
 <tr><td width="250">Uptime:</td><td><%=uptimeText.toString()%></tr>
 <%
 for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
+    double cacheSizeMb = (double)cacheManager.getCacheSize(i)/1024/1024;
+    DecimalFormat df = new DecimalFormat("#.###");
 %>
-<tr><td><%=cacheManager.getCacheDescription(i)%> Cache Size:</td><td><%=cacheManager.getCacheSize(i)%></tr>
+<tr><td><%=cacheManager.getCacheDescription(i)%> Cache Size:</td><td><%=df.format(cacheSizeMb)%> MByte</tr>
 <tr><td><%=cacheManager.getCacheDescription(i)%> # of Cache Entries:</td><td><%=cacheManager.getNumberOfCacheEntries(i)%></tr>
 <tr><td><%=cacheManager.getCacheDescription(i)%> # of Seen Signals:</td><td><%=cacheManager.getNumberOfSeenSignals(i)%></tr>
 <tr><td><%=cacheManager.getCacheDescription(i)%> # of Requests:</td><td><%=cacheManager.getNumberOfCacheRequests(i)%></tr>

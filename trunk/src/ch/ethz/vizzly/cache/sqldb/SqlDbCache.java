@@ -587,9 +587,9 @@ public class SqlDbCache extends AbstractCache {
         long total = 0;
         for(SqlDbCacheMetaEntry e : cacheMeta.values()) {
             if(e.hasLocationData) {
-                total += e.numElements * 12;
+                total += e.numElements * 24;
             } else {
-                total += e.numElements * 4;
+                total += e.numElements * 8;
             }
         }
         return total;
