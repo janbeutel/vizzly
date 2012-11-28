@@ -46,6 +46,9 @@ public class AggregationLevelLookup {
 
     private final String stateFile = "estimation.dat";
 
+    private final String stateFileTemp = "estimation.dat.tmp";
+
+    
     /**
      * Log.
      */
@@ -144,13 +147,19 @@ public class AggregationLevelLookup {
         ObjectOutputStream o = null;
         synchronized(estimationFileLock) {
             try {
-                fos = new FileOutputStream(stateFile); 
+                fos = new FileOutputStream(stateFileTemp); 
                 o = new ObjectOutputStream(fos);
                 o.writeObject(Integer.valueOf(rateEstimators.size()));
                 for(VizzlySignal s : rateEstimators.keySet()) {
                     o.writeObject(s);
                     o.writeObject(rateEstimators.get(s));
                 }
+                o.close();
+                o = null;
+                fos.close();
+                fos = null;
+                File f = new File(stateFileTemp);
+                f.renameTo(new File(stateFile));
             } catch(IOException e) {
                 log.error(stateFile, e);
             } finally { 
