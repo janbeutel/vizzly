@@ -57,6 +57,8 @@ public class CacheUpdateWorkerThread extends Thread {
 
     public void run() {
         try {
+            // Sleep at the beginning so that the server can first start everything
+            sleep(sleepMsec*2);
             while(running) {
      
                 // Worker 0 is responsible for cleaning
@@ -77,12 +79,10 @@ public class CacheUpdateWorkerThread extends Thread {
                     cache.updateCachedSignal(nextSignal);
                     workerSync.signalWorkerFinished(workerId);
                 }
-                try {
-                    sleep(sleepMsec);
-                } catch(InterruptedException e) {
-                    log.debug("Interrupted", e);
-                }
+                sleep(sleepMsec);
             }
+        } catch(InterruptedException e) {
+            log.debug("Interrupted", e);
         } catch(Exception e) {
             log.error("Worker dying", e);
         }
