@@ -17,14 +17,13 @@
 package ch.ethz.vizzly.cache;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.VizzlyStateContainer;
-import ch.ethz.vizzly.datatype.CachedDataInfo;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.VizzlySignalCurrentness;
 
 /**
  * This class synchronizes multiple, concurrently running worker
@@ -102,13 +101,13 @@ public class CacheUpdateWorkerSynchronization {
         if(cache.isInitialized() && cache.getNumberOfSeenSignals(cache.getNumberOfCaches()-1) > 0) {
             VizzlySignal toProcess = null;
             
-            Vector<CachedDataInfo> cacheInfo = cache.getCachedDataInfo(cache.getNumberOfCaches()-1);
-            Comparator<CachedDataInfo> comp = CachedDataInfo.getComparator(CachedDataInfo.SortParameter.LAST_UPDATE_ASCENDING);
-            Collections.sort(cacheInfo, comp);
+            Vector<VizzlySignalCurrentness> signals = cache.getSignalsWithCurrentness();
+            Collections.sort(signals);
+          
             // Iterate through all available signals until a conflict-free signal is found
             synchronized(workerSyncLock) {
-                for(int j=0; j < cacheInfo.size(); j++) {
-                    toProcess = cacheInfo.get(j).signal;
+                for(int j=0; j < signals.size(); j++) {
+                    toProcess = signals.get(j).signal;
                     for(int i=0; i < workerSignal.length; i++) {
                         // Check if the next signal is currently updated by another thread
                         // Additionally avoid accessing the same data source (e.g., a MySQL table) 
