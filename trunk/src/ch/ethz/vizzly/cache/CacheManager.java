@@ -18,6 +18,7 @@ package ch.ethz.vizzly.cache;
 
 import java.util.Calendar;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -28,6 +29,7 @@ import ch.ethz.vizzly.datatype.CachedDataInfo;
 import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.VizzlySignalCurrentness;
 import ch.ethz.vizzly.performance.AbstractPerformanceTracker;
 import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement;
 import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement.DataBackend;
@@ -46,7 +48,6 @@ public class CacheManager {
      */
     private static Logger log = Logger.getLogger(CacheManager.class);
     
-    
     private Vector<CacheConfiguration> caches = null;
     
     private Calendar cal = null;
@@ -61,11 +62,25 @@ public class CacheManager {
     
     private DataReaderRegistry dataReaderRegistry = null;
     
+    /**
+     * Keep track when we tried to update a signal most recently
+     */
+    private ConcurrentHashMap<VizzlySignal,Long> signalLastUpdateAttempt = null;
+    
     public CacheManager(Vector<CacheConfiguration> caches, DataReaderRegistry dataReaderRegistry, AbstractPerformanceTracker perfTracker) {
         this.caches = caches;
         this.dataReaderRegistry = dataReaderRegistry;
         this.perfTracker = perfTracker;
         signalsToRemove = new Vector<VizzlySignal>();
+        signalLastUpdateAttempt = new ConcurrentHashMap<VizzlySignal,Long>();
+        // Try to populate last update information from cached information
+        // First seen signals, if data is also cached the currentness is refined in the second loop
+        for(VizzlySignal s : caches.lastElement().cache.getSignals()) {
+            signalLastUpdateAttempt.put(s, 0L);
+        }
+        for(CachedDataInfo d : caches.lastElement().cache.getCachedDataInfo()) {
+            signalLastUpdateAttempt.put(d.signal, d.lastUpdate.getTime());
+        }
     }
   
     public Vector<TimedLocationValue> getSignalData(VizzlySignal signal, int windowLengthSec, 
@@ -167,6 +182,8 @@ public class CacheManager {
         }
         
         try {
+            Calendar cal = Calendar.getInstance();
+            signalLastUpdateAttempt.put(signal, cal.getTime().getTime());
             AbstractDataReader reader = dataReaderRegistry.getDataReader(signal.dataSource.type);
             Vector<TimedLocationValue> r = reader.getSignalData(signal, timeFilterStart, null, 0);
             if(r != null && r.size() > 0) {
@@ -244,6 +261,7 @@ public class CacheManager {
                 signalsToRemove.remove(signal);
             }
         }
+        signalLastUpdateAttempt.remove(signal);
     }
     
     // Called from web page to show the users that there are pending requests
@@ -312,8 +330,17 @@ public class CacheManager {
         // The last/largest cache is filled first
         if(!caches.lastElement().cache.getSignals().contains(signal)) {
             caches.lastElement().cache.addSignal(signal);
+            signalLastUpdateAttempt.put(signal, 0L);
         }
         return caches.lastElement().cache.isInCache(signal, caches.lastElement().windowLength);
+    }
+    
+    public Vector<VizzlySignalCurrentness> getSignalsWithCurrentness() {
+        Vector<VizzlySignalCurrentness> ret = new Vector<VizzlySignalCurrentness>();
+        for(VizzlySignal s : signalLastUpdateAttempt.keySet()) {
+            ret.add(new VizzlySignalCurrentness(s, signalLastUpdateAttempt.get(s)));
+        }
+        return ret;
     }
   
 

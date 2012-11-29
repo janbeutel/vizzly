@@ -181,20 +181,29 @@ public class GsnMultiDataFetcher {
             semaphore.acquire();
 
             URL dataSourceUrl = new URL(dataSourceUrlStr);
-            BufferedReader in = new BufferedReader(new InputStreamReader(dataSourceUrl.openStream()));
+            BufferedReader in = new BufferedReader(new InputStreamReader(dataSourceUrl.openStream()), 8172);
+            
+            int charRead = 0;
+            char[] buffer = new char[8172];
+            StringBuffer stringBuffer = new StringBuffer();
+            while ((charRead = in.read(buffer)) > 0) {
+                stringBuffer.append(buffer, 0, charRead);
+            }
+            
+            String[] lines = stringBuffer.toString().split("\n");
+            
             Calendar cal = Calendar.getInstance();
             SimpleDateFormat dateFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS zzz");
-            
-            String inputLine;
+       
             long timestamp;
-            while ((inputLine = in.readLine()) != null) {
+            for(String inputLine : lines) {
                 if(inputLine.startsWith("#")) {
                     continue;
                 }
                 if(inputLine.contains("null")) {
                     continue;
                 }
-                String [] parts = inputLine.split(",");
+                String[] parts = inputLine.split(",");
 
                 if(includeLocation) {
                     cal.setTime(dateFormatter.parse(parts[3]));
