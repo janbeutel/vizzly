@@ -101,10 +101,10 @@ public class CachedDataInfo {
                 case LAST_UPDATE_ASCENDING:
                     // Can be null when the cache entry is initialized/filled for the first time
                     if(o1 == null || o1.lastUpdate == null) {
-                        return 1;
+                        return -1;
                     }
                     if(o2 == null || o2.lastUpdate == null) {
-                        return -1;
+                        return 1;
                     }
                     comparison = o1.lastUpdate.compareTo(o2.lastUpdate);
                     if (comparison != 0) return comparison;
@@ -112,10 +112,10 @@ public class CachedDataInfo {
                 case LAST_UPDATE_DESCENDING:
                     // Can be null when the cache entry is initialized/filled for the first time
                     if(o1 == null || o1.lastUpdate == null) {
-                        return -1;
+                        return 1;
                     }
                     if(o2 == null || o2.lastUpdate == null) {
-                        return 1;
+                        return -1;
                     }
                     comparison = o2.lastUpdate.compareTo(o1.lastUpdate);
                     if (comparison != 0) return comparison;

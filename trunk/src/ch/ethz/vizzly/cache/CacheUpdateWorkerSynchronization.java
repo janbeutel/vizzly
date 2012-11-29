@@ -16,11 +16,14 @@
 
 package ch.ethz.vizzly.cache;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.VizzlyStateContainer;
+import ch.ethz.vizzly.datatype.CachedDataInfo;
 import ch.ethz.vizzly.datatype.VizzlySignal;
 
 /**
@@ -39,8 +42,6 @@ public class CacheUpdateWorkerSynchronization {
 
     private CacheUpdateWorkerThread[] workers = null;
 
-    private int[] workerCurrentSignalIdx = null;
-    
     private Boolean threadsStarted = false;
   
     private int numWorkers = 0;
@@ -62,10 +63,8 @@ public class CacheUpdateWorkerSynchronization {
                 this.numWorkers = numWorkers;
                 workers = new CacheUpdateWorkerThread[numWorkers];
                 workerSignal = new VizzlySignal[numWorkers];
-                workerCurrentSignalIdx = new int[numWorkers];
                 for(int i = 0; i < workerSignal.length; i++) {
                     workerSignal[i] = null;
-                    workerCurrentSignalIdx[i] = 0;
                 }
                 for(int i = 0; i < numWorkers; i++) {
                     if(workers[i] == null || !workers[i].isAlive()) {
@@ -102,12 +101,14 @@ public class CacheUpdateWorkerSynchronization {
     public VizzlySignal getNextSignal(int workerId) {
         if(cache.isInitialized() && cache.getNumberOfSeenSignals(cache.getNumberOfCaches()-1) > 0) {
             VizzlySignal toProcess = null;
-            Vector<VizzlySignal> signals = cache.getSignals(cache.getNumberOfCaches()-1);
+            
+            Vector<CachedDataInfo> cacheInfo = cache.getCachedDataInfo(cache.getNumberOfCaches()-1);
+            Comparator<CachedDataInfo> comp = CachedDataInfo.getComparator(CachedDataInfo.SortParameter.LAST_UPDATE_ASCENDING);
+            Collections.sort(cacheInfo, comp);
             // Iterate through all available signals until a conflict-free signal is found
             synchronized(workerSyncLock) {
-                for(int j=1; j < signals.size(); j++) {
-                    workerCurrentSignalIdx[workerId] = (workerCurrentSignalIdx[workerId]+j) % signals.size();
-                    toProcess = signals.get(workerCurrentSignalIdx[workerId]);
+                for(int j=0; j < cacheInfo.size(); j++) {
+                    toProcess = cacheInfo.get(j).signal;
                     for(int i=0; i < workerSignal.length; i++) {
                         // Check if the next signal is currently updated by another thread
                         // Additionally avoid accessing the same data source (e.g., a MySQL table) 
