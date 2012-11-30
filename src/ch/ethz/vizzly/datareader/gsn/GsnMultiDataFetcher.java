@@ -189,6 +189,12 @@ public class GsnMultiDataFetcher {
             while ((charRead = in.read(buffer)) > 0) {
                 stringBuffer.append(buffer, 0, charRead);
             }
+            in.close();
+            
+            if(charRead == 0) {
+                semaphore.release();
+                return data;
+            }
             
             String[] lines = stringBuffer.toString().split("\n");
             
@@ -204,21 +210,28 @@ public class GsnMultiDataFetcher {
                     continue;
                 }
                 String[] parts = inputLine.split(",");
-
+                
                 if(includeLocation) {
+                    if(parts.length < 4) {
+                        log.warn("Received incomplete line from GSN");
+                        continue;
+                    }
                     cal.setTime(dateFormatter.parse(parts[3]));
                     timestamp = cal.getTimeInMillis();
                     data.add(new TimedLocationValue(timestamp, Double.valueOf(parts[0]),
                             GeoCoordConverter.convertLatitude(Double.valueOf(parts[1])),
                             GeoCoordConverter.convertLongitude(Double.valueOf(parts[2]))));
                 } else {
+                    if(parts.length < 2) {
+                        log.warn("Received incomplete line from GSN");
+                        continue;
+                    }
                     cal.setTime(dateFormatter.parse(parts[1]));
                     timestamp = cal.getTimeInMillis();
                     data.add(new TimedLocationValue(timestamp, Double.valueOf(parts[0])));
                 }
 
             }
-            in.close();
             log.debug("Num filled rows: " + data.size());
 
         } catch (IOException e) {
