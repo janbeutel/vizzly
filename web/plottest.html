@@ -34,6 +34,15 @@
                 "timeField": "generation_time",
                 "scaling": 1.0,
                 "visible": true
+            },
+            {
+                "displayName": "Pos 5 Humidity",
+                "dataSource": { "type": "gsn", "serverAddress": "data.permasense.ch", "name": "matterhorn_dozer_nodehealth__conv" },
+                "dataField": "humidity",
+                "deviceSelect": { "type": "single", "field": "position", "value": 5 },
+                "timeField": "generation_time",
+                "scaling": 1.0,
+                "visible": true
             }
         ]
         };

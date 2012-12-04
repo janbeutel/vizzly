@@ -89,7 +89,6 @@ public class VizzlyServlet extends HttpServlet {
         // Parameters that correspond to actions
         String statsParam = req.getParameter("stats");
         String aggMapParam = req.getParameter("aggMap");
-        String heatMapParam = req.getParameter("heatMap");
         // Signal selection 
         String viewConfigParam = req.getParameter("viewConfig");
         // Time selection
@@ -117,7 +116,7 @@ public class VizzlyServlet extends HttpServlet {
         }
 
         // Check if the user sent a valid request
-        if(statsParam == null && heatMapParam == null) {
+        if(statsParam == null) {
             if(viewConfigParam == null && jsonReq.length() == 0) {
                 returnErrorMessage("Invalid request. Please specify valid signals", resp);
                 return;
@@ -136,7 +135,7 @@ public class VizzlyServlet extends HttpServlet {
         }
         
         // Check if anything useful was included
-        if(statsParam == null && heatMapParam == null) {
+        if(statsParam == null) {
             if(viewConfig == null || viewConfig.signals == null) {
                 returnErrorMessage("Invalid request. Please specify valid signals", resp);
                 return;
@@ -156,10 +155,12 @@ public class VizzlyServlet extends HttpServlet {
             }
         }
 
-        if(timeStartParam != null) {
+        // Some (broken) browsers send "NaN" values, probably related to
+        // varying JavaScript Date support (http://dygraphs.com/date-formats.html)
+        if(timeStartParam != null && !timeStartParam.toLowerCase().equals("nan")) {
             timeFilterStart = Long.parseLong(timeStartParam);
         }
-        if(timeEndParam != null) {
+        if(timeEndParam != null && !timeEndParam.toLowerCase().equals("nan")) {
             timeFilterEnd = Long.parseLong(timeEndParam);
         }
         
@@ -193,9 +194,6 @@ public class VizzlyServlet extends HttpServlet {
         if(aggMapParam != null) {
             // Respond with map grid data
             getAggregationMapCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, resp, reqMeas);
-        } else if(heatMapParam != null) {
-            // Respond with a transparent PNG that displays a heat map
-            getHeatMap(resp);
         } else if(statsParam != null) {
             // Respond with performance statistics
             showPerformanceStats(resp);
@@ -291,14 +289,6 @@ public class VizzlyServlet extends HttpServlet {
         outputStream.write(sb.toString().getBytes("UTF-8"));
     }
 
-    private void getHeatMap(HttpServletResponse resp) throws IOException {
-        OverlayHeatMap heatMap = new OverlayHeatMap();
-        BufferedImage bufferedImage = heatMap.getImage();
-        resp.setContentType("image/png");
-        ServletOutputStream outputStream = resp.getOutputStream();
-        ImageIO.write(bufferedImage, "png", outputStream);
-    }
-    
     private void returnErrorMessage(String errorMsg, HttpServletResponse resp) throws IOException
     {
         resp.setContentType("text/plain; charset=UTF-8");

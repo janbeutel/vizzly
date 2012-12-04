@@ -71,69 +71,6 @@ if(typeof google == 'object') {
         return style.join('');
     };
     
-    function HeatOverlay(map, latLng) {
-        this.center_ = latLng;
-        this.map_ = map;
-        this.div_ = null;
-        this.width_ = 200;
-        this.height_ = 200;
-        this.image_ = '/vizzly?heatMap';
-     
-        this.setMap(map);
-    }
-
-    HeatOverlay.prototype = new google.maps.OverlayView();
-
-    HeatOverlay.prototype.onAdd = function() {
-      // Create the DIV and set some basic attributes.
-      var div = document.createElement('div');
-      div.style.border = "none";
-      div.style.borderWidth = "0px";
-      div.style.position = "absolute";
-
-      // Create an IMG element and attach it to the DIV.
-      var img = document.createElement("img");
-      img.src = this.image_;
-      img.style.width = "100%";
-      img.style.height = "100%";
-      div.appendChild(img);
-
-      // Set the overlay's div_ property to this DIV
-      this.div_ = div;
-
-      // We add an overlay to a map via one of the map's panes.
-      // We'll add this overlay to the overlayImage pane.
-      var panes = this.getPanes();
-      panes.overlayLayer.appendChild(div);
-    }
-    
-    HeatOverlay.prototype.draw = function() {
-
-      var overlayProjection = this.getProjection();
-      //var sw = overlayProjection.fromLatLngToDivPixel(this.bounds_.getSouthWest());
-      //var ne = overlayProjection.fromLatLngToDivPixel(this.bounds_.getNorthEast());
-      var center = overlayProjection.fromLatLngToDivPixel(this.center_);
-
-      center.x -= parseInt(this.width_ / 2, 10);
-      center.y -= parseInt(this.height_ / 2, 10);
-
-      var div = this.div_;
-      div.style.left = center.x + 'px';
-      div.style.top = center.y + 'px';
-      div.style.width = this.width_ + 'px';
-      div.style.height = this.height_ + 'px';
-      div.style.opacity = 0.5;
-      //div.style.left = sw.x + 'px';
-      //div.style.top = ne.y + 'px';
-      //div.style.width = (ne.x - sw.x) + 'px';
-      //div.style.height = (sw.y - ne.y) + 'px';
-    }
-    
-    HeatOverlay.prototype.onRemove = function() {
-      this.div_.parentNode.removeChild(this.div_);
-      this.div_ = null;
-    }
-
     function InfoOverlay(map) {
         this.map_ = map;
         this.center_ = this.map_.getCenter();
@@ -289,8 +226,6 @@ if(typeof google == 'object') {
             };
 
             this.map.controls[google.maps.ControlPosition.TOP_CENTER].push(selectDiv);
-            
-            //var heatmap = new HeatOverlay(this.map, zurich);
             
             this.infoOverlay = new InfoOverlay(this.map);
             
@@ -660,7 +595,7 @@ function SignalSelect(initobject) {
     var lastGroup = '';
     var container = null;
     for (i=0; i < this.shownSignals.length; i++) {
-        curField =  this.shownSignals[i].field;
+        curField = this.shownSignals[i].dataField;
         if(typeof curField == 'object') {
             curField = curField.valueOf();
         }
