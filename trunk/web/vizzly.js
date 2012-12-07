@@ -261,7 +261,7 @@ if(typeof google == 'object') {
             };
             req.open("POST", queryStr, true);
             req.setRequestHeader("Content-Type", "text/plain")
-            req.send(JSON.stringify(this.config));
+            req.send(JSON.stringify(this.getVisibleSignals()));
         };
 
         this.dataLoadedCallback = function(data) {
@@ -367,6 +367,13 @@ if(typeof google == 'object') {
                 position: pos
             });
             infowindow.open(this.map);
+        };
+        this.getVisibleSignals = function() {
+            var visibleSignals = [];
+            for(i=0; i < this.config.signals.length; i++) {
+                if(this.config.signals[i].visible) visibleSignals.push(this.config.signals[i]);
+            }
+            return visibleSignals;
         };
         this.config = config;
         this.canvas = canvas;
@@ -870,10 +877,9 @@ function VizzlyDygraph() {
           };
           req.open("POST", queryStr, true);
           req.setRequestHeader("Content-Type", "text/plain")
-          req.send(JSON.stringify(this.config));
+          req.send(JSON.stringify(this.getVisibleSignals()));
         }
     };
-        
     this.dataLoadedCallback = function(fullReload, data) {
       var errorFromServer = data.match(/# ERROR:\s*.*/g);
       if(errorFromServer == null) {
@@ -1039,7 +1045,7 @@ function VizzlyDygraph() {
           $(s).text(' | ');
           $(this.zoomTextDiv).append(s);
           s = document.createElement('a');
-          $(s).text('Download CSV').attr('href', this.buildQuery()+'&viewConfig='+JSON.stringify(this.config));
+          $(s).text('Download CSV').attr('href', this.buildQuery()+'&signals='+JSON.stringify(this.getVisibleSignals()));
           $(this.zoomTextDiv).append(s);
         }
     };
@@ -1092,6 +1098,13 @@ function VizzlyDygraph() {
           }
       }
       this.textZoom(newMinDate, newMaxDate);
+    };
+    this.getVisibleSignals = function() {
+        var visibleSignals = [];
+        for(i=0; i < this.config.signals.length; i++) {
+            if(this.config.signals[i].visible) visibleSignals.push(this.config.signals[i]);
+        }
+        return visibleSignals;
     };
 }
 
