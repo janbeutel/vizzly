@@ -16,16 +16,14 @@
 
 package ch.ethz.vizzly;
 
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.IOException;
 
-import javax.imageio.ImageIO;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.annotation.WebServlet;
 
 import org.apache.log4j.Logger;
 
@@ -33,7 +31,6 @@ import ch.ethz.vizzly.cache.CacheManager;
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
-import ch.ethz.vizzly.datatype.VizzlyView;
 import ch.ethz.vizzly.performance.UserRequestPerformanceMeasurement;
 import ch.ethz.vizzly.util.VizzlySignalValidatorUtil;
 
@@ -90,7 +87,7 @@ public class VizzlyServlet extends HttpServlet {
         String statsParam = req.getParameter("stats");
         String aggMapParam = req.getParameter("aggMap");
         // Signal selection 
-        String viewConfigParam = req.getParameter("viewConfig");
+        String signalsParam = req.getParameter("signals");
         // Time selection
         String timeStartParam = req.getParameter("timeStart");
         String timeEndParam = req.getParameter("timeEnd");
@@ -117,7 +114,7 @@ public class VizzlyServlet extends HttpServlet {
 
         // Check if the user sent a valid request
         if(statsParam == null) {
-            if(viewConfigParam == null && jsonReq.length() == 0) {
+            if(signalsParam == null && jsonReq.length() == 0) {
                 returnErrorMessage("Invalid request. Please specify valid signals", resp);
                 return;
             }
@@ -125,28 +122,28 @@ public class VizzlyServlet extends HttpServlet {
         
         // Convert JSON into Java object
         Gson gson = new Gson();
-        VizzlyView viewConfig = null;
-        if(viewConfigParam != null) {
+        VizzlySignal[] signals = null;
+        if(signalsParam != null) {
             // From GET variable
-            viewConfig = gson.fromJson(viewConfigParam, VizzlyView.class);
+            signals = gson.fromJson(signalsParam, VizzlySignal[].class);
         } else {
             // From POST contents
-            viewConfig = gson.fromJson(jsonReq.toString(), VizzlyView.class);
+            signals = gson.fromJson(jsonReq.toString(), VizzlySignal[].class);
         }
         
         // Check if anything useful was included
         if(statsParam == null) {
-            if(viewConfig == null || viewConfig.signals == null) {
+            if(signals == null || signals.length == 0) {
                 returnErrorMessage("Invalid request. Please specify valid signals", resp);
                 return;
             }
         }
 
-        if(viewConfig != null) {
+        if(signals != null) {
             try {
                 VizzlyStateContainer vizzlyState = 
                         (VizzlyStateContainer)getServletContext().getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
-                for(VizzlySignal s : viewConfig.getVisibleSignals()) {
+                for(VizzlySignal s : signals) {
                     VizzlySignalValidatorUtil.validateSignal(s, vizzlyState.getDataReaderRegistry());
                 }
             } catch(VizzlyInvalidSignalException e) {
@@ -193,23 +190,23 @@ public class VizzlyServlet extends HttpServlet {
 
         if(aggMapParam != null) {
             // Respond with map grid data
-            getAggregationMapCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, resp, reqMeas);
+            getAggregationMapCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, resp, reqMeas);
         } else if(statsParam != null) {
             // Respond with performance statistics
             showPerformanceStats(resp);
-        } else if(viewConfig != null) {
+        } else if(signals != null) {
             Boolean forceLoadUnaggregated = false;
             if(forceLoadUnaggregatedParam != null) {
                 forceLoadUnaggregated = true;
             }
             // Respond with a time series
-            getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, resp, reqMeas);
+            getTimedDataCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, resp, reqMeas);
         } else {
             returnErrorMessage("Invalid request parameters.", resp);
         }
     }
 
-    private void getTimedDataCSV(VizzlyView viewConfig, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
+    private void getTimedDataCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
             Double lngSW, Double latNE, Double lngNE, int signalIdx, boolean forceLoadUnaggregated, int canvasWidth, 
             HttpServletResponse resp, UserRequestPerformanceMeasurement reqMeas)
             throws IOException
@@ -219,7 +216,7 @@ public class VizzlyServlet extends HttpServlet {
         // Respond with CSV
         String output = "";
         try {
-            output = CsvOutputGenerator.getTimedDataCSV(viewConfig, timeFilterStart, timeFilterEnd, latSW, 
+            output = CsvOutputGenerator.getTimedDataCSV(signals, timeFilterStart, timeFilterEnd, latSW, 
                     lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {
@@ -235,7 +232,7 @@ public class VizzlyServlet extends HttpServlet {
         vizzlyState.incrNumberOfRequests();
             }
 
-    private void getAggregationMapCSV(VizzlyView viewConfig, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
+    private void getAggregationMapCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
             Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, HttpServletResponse resp,
             UserRequestPerformanceMeasurement reqMeas)
                     throws IOException
@@ -245,7 +242,7 @@ public class VizzlyServlet extends HttpServlet {
         // Respond with CSV
         String output = "";
         try {
-            output = CsvOutputGenerator.getAggregationMapCSV(viewConfig, timeFilterStart, timeFilterEnd, 
+            output = CsvOutputGenerator.getAggregationMapCSV(signals, timeFilterStart, timeFilterEnd, 
                     latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {

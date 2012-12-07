@@ -31,7 +31,6 @@ import ch.ethz.vizzly.datatype.LocationValueAggregate;
 import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
-import ch.ethz.vizzly.datatype.VizzlyView;
 import ch.ethz.vizzly.performance.AbstractPerformanceTracker;
 import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement;
 import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement.DataBackend;
@@ -62,7 +61,7 @@ public class CsvOutputGenerator {
      * Method for generating a single CSV output by combining information of several cache contents. Called from
      * SensorVizDataSourceServlet when a user requests data.
      */
-    public static String getTimedDataCSV(VizzlyView view, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
+    public static String getTimedDataCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
             Double lngSW, Double latNE, Double lngNE, int signalIdx, boolean forceLoadUnaggregated, int canvasWidth, 
             UserRequestPerformanceMeasurement reqMeas, CacheManager cache, AbstractPerformanceTracker perfTracker, 
             DataReaderRegistry readerRegistry)
@@ -73,21 +72,21 @@ public class CsvOutputGenerator {
 
         AggregationLevelLookup aggregationLookup = AggregationLevelLookup.getInstance();
 
-        Vector<VizzlySignal> signals = null;
+        VizzlySignal[] displayedSignals = null;
         if(signalIdx == -1) {
             // Stand-alone time series display: Load all signals
-            signals = view.getVisibleSignals();  
+            displayedSignals = signals;
         } else {
             // Time series display integrated into map display: Load only one signal
-            signals = new Vector<VizzlySignal>();
-            signals.add(view.getVisibleSignals().get(signalIdx));
+            displayedSignals = new VizzlySignal[1];
+            displayedSignals[0] = signals[signalIdx];
         }
 
         Vector<Boolean> signalIsAvailable = new Vector<Boolean>();
         Vector<Boolean> valuesAreAggregated = new Vector<Boolean>();
 
         // First check if all data is already available in the cache
-        for(VizzlySignal s : signals) {
+        for(VizzlySignal s : displayedSignals) {
             if(cache.isInCache(s)) {
                 signalIsAvailable.add(true);
             } else {
@@ -118,11 +117,11 @@ public class CsvOutputGenerator {
         // The following code determined the largest, common window length
         int windowLengthSec = AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC;
         if(!forceLoadUnaggregated) {
-            for(int i = 0; i < signals.size(); i++) {
+            for(int i = 0; i < displayedSignals.length; i++) {
                 if(!signalIsAvailable.get(i)) {
                     continue;
                 }
-                VizzlySignal s = signals.get(i);
+                VizzlySignal s = displayedSignals[i];
                 if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
                     int windowLengthThis = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
                     if(windowLengthThis > windowLengthSec) {
@@ -131,13 +130,13 @@ public class CsvOutputGenerator {
                 }
             }
         }
-        for(int i = 0; i < signals.size(); i++) {
+        for(int i = 0; i < displayedSignals.length; i++) {
             if(!signalIsAvailable.get(i)) {
                 valuesList.add(null);
                 valuesAreAggregated.add(null);
                 continue;
             }
-            VizzlySignal s = signals.get(i);
+            VizzlySignal s = displayedSignals[i];
             // Also do not try to load unaggregated data if the selection is out of bounds
             if(!forceLoadUnaggregated && (!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache) 
                     || timeFilterStart == null || timeFilterEnd == null 
@@ -196,9 +195,9 @@ public class CsvOutputGenerator {
         // Write CSV header
         StringWriter csvOutput = new StringWriter();
         csvOutput.write("generation_time,");
-        for(int i = 0; i < signals.size(); i++) {
-            csvOutput.write(signals.get(i).displayName);
-            if(i < signals.size()-1) {
+        for(int i = 0; i < displayedSignals.length; i++) {
+            csvOutput.write(displayedSignals[i].displayName);
+            if(i < displayedSignals.length-1) {
                 csvOutput.write(",");
             }
         }
@@ -206,11 +205,11 @@ public class CsvOutputGenerator {
 
         // Add line with information on data time span
         long viewStartTime = -1, viewEndTime = -1;
-        for(int i = 0; i < signals.size(); i++) {
+        for(int i = 0; i < displayedSignals.length; i++) {
             if(!signalIsAvailable.get(i)) {
                 continue;
             }
-            VizzlySignal s = signals.get(i);
+            VizzlySignal s = displayedSignals[i];
             Long firstTimestamp = cache.getFirstPacketTimestamp(s);
             Long lastTimestamp = cache.getLastPacketTimestamp(s);
 
@@ -278,7 +277,7 @@ public class CsvOutputGenerator {
                         continue;
                     }
                     hasData = true;
-                    sb.append(df.format(thisVec.get(vectorPos[i]).value*signals.get(i).scaling));
+                    sb.append(df.format(thisVec.get(vectorPos[i]).value*displayedSignals[i].scaling));
                     vectorPos[i]++;
                     if(i < valuesList.size()-1) {
                         sb.append(",");
@@ -312,7 +311,7 @@ public class CsvOutputGenerator {
                     StringBuilder sb = new StringBuilder();
                     cal.setTimeInMillis(v.timestamp);
                     sb.append(dateFormatter.format(cal.getTime()));
-                    sb.append(commasFront).append(df.format(v.value*signals.get(i).scaling)).append(commasBack);
+                    sb.append(commasFront).append(df.format(v.value*displayedSignals[i].scaling)).append(commasBack);
                     csvOutput.write(sb.append("\n").toString());
                     returnedLines++;
                 }
@@ -324,7 +323,7 @@ public class CsvOutputGenerator {
         return csvOutput.toString();
     }
 
-    public static String getAggregationMapCSV(VizzlyView view, Long timeFilterStart, Long timeFilterEnd, Double latSW, Double lngSW, 
+    public static String getAggregationMapCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, Double lngSW, 
             Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, UserRequestPerformanceMeasurement reqMeas,
             CacheManager cache, AbstractPerformanceTracker perfTracker, DataReaderRegistry readerRegistry)
                     throws VizzlyException {
@@ -333,7 +332,7 @@ public class CsvOutputGenerator {
         }
 
         StringWriter outWriter = new StringWriter();
-        VizzlySignal s = view.getVisibleSignals().get(signalIdx);
+        VizzlySignal s = signals[signalIdx];
         AggregationLevelLookup aggregationLookup = AggregationLevelLookup.getInstance();
 
         if(!cache.isInCache(s)) {
