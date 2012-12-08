@@ -247,9 +247,6 @@ if(typeof google == 'object') {
             if(this.selectRangeEnd != null) {
                 queryStr += '&timeEnd=' + this.selectRangeEnd.getTime();
             }
-            if(this.selectedSignalIdx != null) {
-                queryStr += '&signalIdx=' + this.selectedSignalIdx;
-            }
             var req = new XMLHttpRequest();
             obj = this;
             req.onreadystatechange = function() {
@@ -269,8 +266,10 @@ if(typeof google == 'object') {
             this.infoOverlay.hide();
             var errorFromServer = data.match(/# ERROR:\s*.*/g);
             if(errorFromServer == null) {
-                var range = data.match(/#\s*[-]*\d*,\s*[-]*\d*/)[0].match(/[-]*\d+/g);
-                this.fullDataTimeRange = new Array(parseInt(range[0]), parseInt(range[1]));
+                var meta = data.match(/#\s*[-]*\d*,\s*[-]*\d*,\s*[-]*\d*,\s*[-]*\d*/)[0].match(/[-]*\d+/g);
+                this.fullDataTimeRange = new Array(parseInt(meta[0]), parseInt(meta[1]));
+                this.gridNumRows = parseInt(meta[2]);
+                this.gridNumCols = parseInt(meta[3]);
                 this.timeSlider.setMaxRange(this.fullDataTimeRange[0], this.fullDataTimeRange[1]);
                 if (this.selectRangeStart==null && this.selectRangeEnd==null) {
                     this.selectRangeStart=new Date(this.fullDataTimeRange[0]);
@@ -370,8 +369,19 @@ if(typeof google == 'object') {
         };
         this.getVisibleSignals = function() {
             var visibleSignals = [];
+            var visibleIdxCnt = 0;
             for(i=0; i < this.config.signals.length; i++) {
-                if(this.config.signals[i].visible) visibleSignals.push(this.config.signals[i]);
+                if(this.config.signals[i].visible) {
+                    // if this.selectedSignalIdx is set, there is only one signal to be displayed
+                    if(this.selectedSignalIdx != null) {
+                        if(visibleIdxCnt == this.selectedSignalIdx) {
+                            visibleSignals.push(this.config.signals[i]);
+                        }
+                        visibleIdxCnt++;
+                    } else {
+                        visibleSignals.push(this.config.signals[i]);
+                    }
+                }
             }
             return visibleSignals;
         };
@@ -974,9 +984,6 @@ function VizzlyDygraph() {
         if(this.selectRangeEnd != null) {
             queryStr += '&timeEnd=' + this.selectRangeEnd.getTime();
         }
-        if(this.selectedSignalIdx != null) {
-            queryStr += '&signalIdx=' + this.selectedSignalIdx;
-        }
         if(this.config.mapBounds != null) {
             queryStr += '&mapBounds='+this.config.mapBounds;
         }
@@ -1101,8 +1108,19 @@ function VizzlyDygraph() {
     };
     this.getVisibleSignals = function() {
         var visibleSignals = [];
+        var visibleIdxCnt = 0;
         for(i=0; i < this.config.signals.length; i++) {
-            if(this.config.signals[i].visible) visibleSignals.push(this.config.signals[i]);
+            if(this.config.signals[i].visible) {
+                // if this.selectedSignalIdx is set, there is only one signal to be displayed
+                if(this.selectedSignalIdx != null) {
+                    if(visibleIdxCnt == this.selectedSignalIdx) {
+                        visibleSignals.push(this.config.signals[i]);
+                    }
+                    visibleIdxCnt++;
+                } else {
+                    visibleSignals.push(this.config.signals[i]);
+                }
+            }
         }
         return visibleSignals;
     };

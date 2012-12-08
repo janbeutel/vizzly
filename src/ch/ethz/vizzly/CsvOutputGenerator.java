@@ -62,7 +62,7 @@ public class CsvOutputGenerator {
      * SensorVizDataSourceServlet when a user requests data.
      */
     public static String getTimedDataCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, boolean forceLoadUnaggregated, int canvasWidth, 
+            Double lngSW, Double latNE, Double lngNE, boolean forceLoadUnaggregated, int canvasWidth, 
             UserRequestPerformanceMeasurement reqMeas, CacheManager cache, AbstractPerformanceTracker perfTracker, 
             DataReaderRegistry readerRegistry)
                     throws VizzlyException {
@@ -71,22 +71,12 @@ public class CsvOutputGenerator {
         }
 
         AggregationLevelLookup aggregationLookup = AggregationLevelLookup.getInstance();
-
-        VizzlySignal[] displayedSignals = null;
-        if(signalIdx == -1) {
-            // Stand-alone time series display: Load all signals
-            displayedSignals = signals;
-        } else {
-            // Time series display integrated into map display: Load only one signal
-            displayedSignals = new VizzlySignal[1];
-            displayedSignals[0] = signals[signalIdx];
-        }
-
+      
         Vector<Boolean> signalIsAvailable = new Vector<Boolean>();
         Vector<Boolean> valuesAreAggregated = new Vector<Boolean>();
 
         // First check if all data is already available in the cache
-        for(VizzlySignal s : displayedSignals) {
+        for(VizzlySignal s : signals) {
             if(cache.isInCache(s)) {
                 signalIsAvailable.add(true);
             } else {
@@ -117,11 +107,11 @@ public class CsvOutputGenerator {
         // The following code determined the largest, common window length
         int windowLengthSec = AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC;
         if(!forceLoadUnaggregated) {
-            for(int i = 0; i < displayedSignals.length; i++) {
+            for(int i = 0; i < signals.length; i++) {
                 if(!signalIsAvailable.get(i)) {
                     continue;
                 }
-                VizzlySignal s = displayedSignals[i];
+                VizzlySignal s = signals[i];
                 if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
                     int windowLengthThis = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
                     if(windowLengthThis > windowLengthSec) {
@@ -130,13 +120,13 @@ public class CsvOutputGenerator {
                 }
             }
         }
-        for(int i = 0; i < displayedSignals.length; i++) {
+        for(int i = 0; i < signals.length; i++) {
             if(!signalIsAvailable.get(i)) {
                 valuesList.add(null);
                 valuesAreAggregated.add(null);
                 continue;
             }
-            VizzlySignal s = displayedSignals[i];
+            VizzlySignal s = signals[i];
             // Also do not try to load unaggregated data if the selection is out of bounds
             if(!forceLoadUnaggregated && (!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache) 
                     || timeFilterStart == null || timeFilterEnd == null 
@@ -195,9 +185,9 @@ public class CsvOutputGenerator {
         // Write CSV header
         StringWriter csvOutput = new StringWriter();
         csvOutput.write("generation_time,");
-        for(int i = 0; i < displayedSignals.length; i++) {
-            csvOutput.write(displayedSignals[i].displayName);
-            if(i < displayedSignals.length-1) {
+        for(int i = 0; i < signals.length; i++) {
+            csvOutput.write(signals[i].displayName);
+            if(i < signals.length-1) {
                 csvOutput.write(",");
             }
         }
@@ -205,11 +195,11 @@ public class CsvOutputGenerator {
 
         // Add line with information on data time span
         long viewStartTime = -1, viewEndTime = -1;
-        for(int i = 0; i < displayedSignals.length; i++) {
+        for(int i = 0; i < signals.length; i++) {
             if(!signalIsAvailable.get(i)) {
                 continue;
             }
-            VizzlySignal s = displayedSignals[i];
+            VizzlySignal s = signals[i];
             Long firstTimestamp = cache.getFirstPacketTimestamp(s);
             Long lastTimestamp = cache.getLastPacketTimestamp(s);
 
@@ -277,7 +267,7 @@ public class CsvOutputGenerator {
                         continue;
                     }
                     hasData = true;
-                    sb.append(df.format(thisVec.get(vectorPos[i]).value*displayedSignals[i].scaling));
+                    sb.append(df.format(thisVec.get(vectorPos[i]).value*signals[i].scaling));
                     vectorPos[i]++;
                     if(i < valuesList.size()-1) {
                         sb.append(",");
@@ -311,7 +301,7 @@ public class CsvOutputGenerator {
                     StringBuilder sb = new StringBuilder();
                     cal.setTimeInMillis(v.timestamp);
                     sb.append(dateFormatter.format(cal.getTime()));
-                    sb.append(commasFront).append(df.format(v.value*displayedSignals[i].scaling)).append(commasBack);
+                    sb.append(commasFront).append(df.format(v.value*signals[i].scaling)).append(commasBack);
                     csvOutput.write(sb.append("\n").toString());
                     returnedLines++;
                 }
@@ -324,7 +314,7 @@ public class CsvOutputGenerator {
     }
 
     public static String getAggregationMapCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, Double lngSW, 
-            Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, UserRequestPerformanceMeasurement reqMeas,
+            Double latNE, Double lngNE, int canvasWidth, int canvasHeight, UserRequestPerformanceMeasurement reqMeas,
             CacheManager cache, AbstractPerformanceTracker perfTracker, DataReaderRegistry readerRegistry)
                     throws VizzlyException {
         if(!cache.isInitialized()) {
@@ -332,7 +322,7 @@ public class CsvOutputGenerator {
         }
 
         StringWriter outWriter = new StringWriter();
-        VizzlySignal s = signals[signalIdx];
+        VizzlySignal s = signals[0];
         AggregationLevelLookup aggregationLookup = AggregationLevelLookup.getInstance();
 
         if(!cache.isInCache(s)) {
@@ -340,11 +330,13 @@ public class CsvOutputGenerator {
         }
 
         // Setup map grid for aggregation
-        int numRows = new Double(Math.floor((double)canvasHeight/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
-        int numCols = new Double(Math.floor((double)canvasWidth/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
-        LocationAggregationGrid grid = new LocationAggregationGrid(latSW, lngSW, latNE, lngNE, numRows, numCols);
+        int numMapGridRows = new Double(Math.floor((double)canvasHeight/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
+        int numMapGridCols = new Double(Math.floor((double)canvasWidth/(double)MAP_GRID_CELL_LENGTH_PIX)).intValue();
+        LocationAggregationGrid grid = new LocationAggregationGrid(latSW, lngSW, latNE, lngNE, numMapGridRows, numMapGridCols);
 
-        if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, canvasWidth, cache)) {
+        // In contrast to the time series display, we do not really have a points/pixel ratio here. Instead we choose
+        // 1000 as not too many data points for generating a map.
+        if(!aggregationLookup.canLoadUnaggregatedData(s, timeFilterStart, timeFilterEnd, 1000, cache)) {
             // Get data from cache
             int windowLengthSec = aggregationLookup.getWindowLength(s, timeFilterStart, timeFilterEnd, canvasWidth, cache);
             reqMeas.setDataFetchStart();
@@ -379,7 +371,8 @@ public class CsvOutputGenerator {
         // Output time bounds
         Long firstTimestamp = cache.getFirstPacketTimestamp(s);
         Long lastTimestamp = cache.getLastPacketTimestamp(s);
-        outWriter.write("# " + Long.toString(firstTimestamp) + ", " + Long.toString(lastTimestamp) + "\n");
+        outWriter.write("# " + Long.toString(firstTimestamp) + ", " + Long.toString(lastTimestamp) 
+                + ", " + Integer.toString(numMapGridRows) + ", " + Integer.toString(numMapGridCols) + "\n");
 
         int returnedLines = 0;
         DecimalFormat df = new DecimalFormat("#.#");
