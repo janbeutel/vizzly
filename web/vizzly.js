@@ -1044,7 +1044,7 @@ function VizzlyDygraph() {
         }
         d = new Date();
         if(this.fullDataTimeRange[1] >= d.getTime()-(12*3600*1000)) {
-            this.appendZoomTextLink(this.zoomTextDiv, "Now", this.fullDataTimeRange[1]-(12*3600*1000),this.fullDataTimeRange[1], true);
+            this.appendZoomTextLink(this.zoomTextDiv, "Now", this.fullDataTimeRange[1]-(12*3600*1000),this.fullDataTimeRange[1], false);
         }
         // Create link for CSV download
         if (!this.config.loaddata) {
