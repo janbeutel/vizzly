@@ -7,12 +7,18 @@
     <!-- Paths for sources -->
     <property name="src" location="./src"/>
     <property name="lib" location="./lib"/>
+    <property name="web" location="./web"/>
     <!-- User properties -->
     <property file="build.properties"/>
+    <taskdef name="jsmin"
+        classname="net.matthaynes.jsmin.JSMin_Task"
+        classpath="./build-tools/jsmin.0.2.4.jar"/>
     <!-- Clean build output -->
     <target name="clean">
         <delete dir="${build}"/>
         <delete dir="${dist}"/>
+        <delete file="${web}/vizzly.min.js"/>
+        <delete file="${web}/vizzly.min.css"/>
     </target>
     <!-- Create build output directories -->
     <target name="create-dirs">
@@ -30,18 +36,22 @@
             </classpath>
         </javac>
     </target>
-    <target name="war" depends="compile">
+    <target name="minify">
+        <jsmin srcfile="${web}/vizzly.js" copyright="(c) 2012 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
+        <jsmin srcfile="${web}/vizzly.css" copyright="(c) 2012 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
+    </target>
+    <target name="war" depends="compile,minify">
 		<war destfile="${dist}/vizzly.war" needxmlfile="false">
-			<fileset dir="web">
+			<fileset dir="${web}">
                 <exclude name="WEB-INF/jetty-env*"/>
             </fileset>
             <lib dir="${lib}"/>
 			<classes dir="${build}"/>
 		</war>
 	</target>
-	<target name="jetty-deploy" depends="compile">
+	<target name="jetty-deploy" depends="compile,minify">
 		<war destfile="dist/root-jetty.war" webxml="jetty-runtime/vizzly/jetty-filters.xml">
-			<fileset dir="web">
+			<fileset dir="${web}">
 			    <exclude name="WEB-INF/jetty-env.xml.example"/>
 			</fileset>
 			<lib dir="${lib}"/>
