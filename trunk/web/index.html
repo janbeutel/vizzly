@@ -43,6 +43,18 @@
                 "locationLatField": "latitude",
                 "locationLngField": "longitude",
                 "thresholds": [ 18.0, 8.0 ]
+            },
+            {
+                "displayName": "CO [ppm]",
+                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_alphasense_co_gps" },
+                "dataField": "sensor_ppm",
+                "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
+                "timeField": "generation_time",
+                "scaling": 1.0,
+                "visible": true,
+                "locationLatField": "latitude",
+                "locationLngField": "longitude",
+                "thresholds": [ 18.0, 8.0 ]
             }
             ]
         };

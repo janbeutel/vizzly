@@ -33,7 +33,7 @@ import ch.ethz.vizzly.cache.CacheUpdateWorkerSynchronization;
 @WebListener 
 public class VizzlyServletContextListener implements ServletContextListener {
 
-    private final int NUM_UPDATE_WORKERS = 1;
+    private final int NUM_UPDATE_WORKERS = 4;
     
     /**
      * Log.

@@ -79,7 +79,6 @@ public class VizzlyServlet extends HttpServlet {
         Double lngSW = null;
         Double latNE = null;
         Double lngNE = null;
-        int signalIdx = -1;
         int canvasWidth = 0;
         int canvasHeight = 0;
         // HTTP request parameters
@@ -93,8 +92,6 @@ public class VizzlyServlet extends HttpServlet {
         String timeEndParam = req.getParameter("timeEnd");
         // Map area of interest
         String mapBoundsParam = req.getParameter("mapBounds");
-        // Signal to be displayed on the map (one at a time)
-        String signalIdxParam = req.getParameter("signalIdx");
         // Dimension of canvas object used for displaying requested contents
         String canvasWidthParam = req.getParameter("canvasWidth");
         String canvasHeightParam = req.getParameter("canvasHeight");
@@ -169,10 +166,6 @@ public class VizzlyServlet extends HttpServlet {
             lngNE = Double.parseDouble(s[3]);
         }
         
-        if(signalIdxParam != null) {
-            signalIdx = Integer.parseInt(signalIdxParam);
-        }
-        
         canvasWidth = DEFAULT_CANVAS_WIDTH;
         canvasHeight = DEFAULT_CANVAS_HEIGHT;
         if(canvasWidthParam != null) {
@@ -190,7 +183,7 @@ public class VizzlyServlet extends HttpServlet {
 
         if(aggMapParam != null) {
             // Respond with map grid data
-            getAggregationMapCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, resp, reqMeas);
+            getAggregationMapCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, canvasWidth, canvasHeight, resp, reqMeas);
         } else if(statsParam != null) {
             // Respond with performance statistics
             showPerformanceStats(resp);
@@ -200,14 +193,14 @@ public class VizzlyServlet extends HttpServlet {
                 forceLoadUnaggregated = true;
             }
             // Respond with a time series
-            getTimedDataCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, resp, reqMeas);
+            getTimedDataCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, forceLoadUnaggregated, canvasWidth, resp, reqMeas);
         } else {
             returnErrorMessage("Invalid request parameters.", resp);
         }
     }
 
     private void getTimedDataCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, boolean forceLoadUnaggregated, int canvasWidth, 
+            Double lngSW, Double latNE, Double lngNE, boolean forceLoadUnaggregated, int canvasWidth, 
             HttpServletResponse resp, UserRequestPerformanceMeasurement reqMeas)
             throws IOException
             {
@@ -217,7 +210,7 @@ public class VizzlyServlet extends HttpServlet {
         String output = "";
         try {
             output = CsvOutputGenerator.getTimedDataCSV(signals, timeFilterStart, timeFilterEnd, latSW, 
-                    lngSW, latNE, lngNE, signalIdx, forceLoadUnaggregated, canvasWidth, reqMeas, vizzlyState.getCacheManager(),
+                    lngSW, latNE, lngNE, forceLoadUnaggregated, canvasWidth, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {
             returnErrorMessage(e.getLocalizedMessage(), resp);
@@ -233,7 +226,7 @@ public class VizzlyServlet extends HttpServlet {
             }
 
     private void getAggregationMapCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
-            Double lngSW, Double latNE, Double lngNE, int signalIdx, int canvasWidth, int canvasHeight, HttpServletResponse resp,
+            Double lngSW, Double latNE, Double lngNE, int canvasWidth, int canvasHeight, HttpServletResponse resp,
             UserRequestPerformanceMeasurement reqMeas)
                     throws IOException
                     {
@@ -243,7 +236,7 @@ public class VizzlyServlet extends HttpServlet {
         String output = "";
         try {
             output = CsvOutputGenerator.getAggregationMapCSV(signals, timeFilterStart, timeFilterEnd, 
-                    latSW, lngSW, latNE, lngNE, signalIdx, canvasWidth, canvasHeight, reqMeas, vizzlyState.getCacheManager(),
+                    latSW, lngSW, latNE, lngNE, canvasWidth, canvasHeight, reqMeas, vizzlyState.getCacheManager(),
                     vizzlyState.getPerformanceTracker(), vizzlyState.getDataReaderRegistry());
         } catch(VizzlyException e) {
             returnErrorMessage(e.getLocalizedMessage(), resp);
