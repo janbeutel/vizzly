@@ -141,6 +141,10 @@ public class GsnMultiDataFetcher {
             String url = buildGsnDataSourceUrl(signal, timeFilterStart, timeFilterEndToGsn, 0, singleFetchRowLimit, includeLocation);
             GsnFetchResult fetchResult = fetchDataFromGsn(url, includeLocation);
             Vector<TimedLocationValue> r = fetchResult.validSamples;
+            if(r.size() == 0) {
+                // Stop when we cannot find valid samples anymore
+                break;
+            }
             if(round == 1) {
                 rAll = r;
             } else {
