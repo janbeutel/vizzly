@@ -137,6 +137,7 @@ public class GsnMultiDataFetcher {
             if(round > 1) {
                 log.debug("Fetching round " + round);
             }
+            Long lastTimeFilterEndToGsn = timeFilterEndToGsn;
             String url = buildGsnDataSourceUrl(signal, timeFilterStart, timeFilterEndToGsn, 0, singleFetchRowLimit, includeLocation);
             GsnFetchResult fetchResult = fetchDataFromGsn(url, includeLocation);
             Vector<TimedLocationValue> r = fetchResult.validSamples;
@@ -156,6 +157,11 @@ public class GsnMultiDataFetcher {
             round++;
             // Get entry with the lowest timestamp, this is the last entry coming from GSN
             timeFilterEndToGsn = r.get(r.size()-1).timestamp;
+            if(timeFilterEndToGsn.equals(lastTimeFilterEndToGsn)) {
+                // Also stop if the fetch boundary does not change anymore
+                break;
+            }
+            
             // Adapt maximum number of lines that the next run can return
             if(rowLimit > 0 && singleFetchRowLimit > (rowLimit-rAll.size())) {
                 singleFetchRowLimit = rowLimit-rAll.size();
@@ -165,6 +171,7 @@ public class GsnMultiDataFetcher {
             // Data from GSN is in reverse order with the most recent timestamp first
             Collections.reverse(rAll);
         }
+        
         return rAll;
     }
 
