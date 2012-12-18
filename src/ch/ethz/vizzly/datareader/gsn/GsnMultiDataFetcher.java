@@ -211,24 +211,28 @@ public class GsnMultiDataFetcher {
                 }
                 String[] parts = inputLine.split(",");
                 
-                if(includeLocation) {
-                    if(parts.length < 4) {
-                        log.warn("Received incomplete line from GSN");
-                        continue;
+                try {
+                    if(includeLocation) {
+                        if(parts.length < 4) {
+                            log.warn("Received incomplete line from GSN");
+                            continue;
+                        }
+                        cal.setTime(dateFormatter.parse(parts[3]));
+                        timestamp = cal.getTimeInMillis();
+                        data.add(new TimedLocationValue(timestamp, Double.valueOf(parts[0]),
+                                GeoCoordConverter.convertLatitude(Double.valueOf(parts[1])),
+                                GeoCoordConverter.convertLongitude(Double.valueOf(parts[2]))));
+                    } else {
+                        if(parts.length < 2) {
+                            log.warn("Received incomplete line from GSN");
+                            continue;
+                        }
+                        cal.setTime(dateFormatter.parse(parts[1]));
+                        timestamp = cal.getTimeInMillis();
+                        data.add(new TimedLocationValue(timestamp, Double.valueOf(parts[0])));
                     }
-                    cal.setTime(dateFormatter.parse(parts[3]));
-                    timestamp = cal.getTimeInMillis();
-                    data.add(new TimedLocationValue(timestamp, Double.valueOf(parts[0]),
-                            GeoCoordConverter.convertLatitude(Double.valueOf(parts[1])),
-                            GeoCoordConverter.convertLongitude(Double.valueOf(parts[2]))));
-                } else {
-                    if(parts.length < 2) {
-                        log.warn("Received incomplete line from GSN");
-                        continue;
-                    }
-                    cal.setTime(dateFormatter.parse(parts[1]));
-                    timestamp = cal.getTimeInMillis();
-                    data.add(new TimedLocationValue(timestamp, Double.valueOf(parts[0])));
+                } catch(NumberFormatException e) {
+                    log.warn("Omitted malformed input: " + inputLine + ", src = " + dataSourceUrl);
                 }
 
             }
