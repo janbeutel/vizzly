@@ -138,13 +138,14 @@ public class GsnMultiDataFetcher {
                 log.debug("Fetching round " + round);
             }
             String url = buildGsnDataSourceUrl(signal, timeFilterStart, timeFilterEndToGsn, 0, singleFetchRowLimit, includeLocation);
-            Vector<TimedLocationValue> r = fetchDataFromGsn(url, includeLocation);
+            GsnFetchResult fetchResult = fetchDataFromGsn(url, includeLocation);
+            Vector<TimedLocationValue> r = fetchResult.validSamples;
             if(round == 1) {
                 rAll = r;
             } else {
                 rAll.addAll(r);
             }
-            if(r.size() < singleFetchRowLimit) {
+            if(fetchResult.numReceivedSamples < singleFetchRowLimit) {
                 // Stop if the maximum row limit was not fully used, thus there is no more data
                 break;
             }
@@ -171,10 +172,11 @@ public class GsnMultiDataFetcher {
      * Method for requesting data from a GSN server over HTTP.
      * @return Parsed result data
      */
-    private Vector<TimedLocationValue> fetchDataFromGsn(String dataSourceUrlStr, Boolean includeLocation) 
+    private GsnFetchResult fetchDataFromGsn(String dataSourceUrlStr, Boolean includeLocation) 
             throws VizzlyException {
 
         Vector<TimedLocationValue> data = new Vector<TimedLocationValue>();
+        int numReceivedSamples = 0;
         long fetchStart = System.currentTimeMillis();
 
         try {
@@ -193,7 +195,7 @@ public class GsnMultiDataFetcher {
             
             if(charRead == 0) {
                 semaphore.release();
-                return data;
+                return new GsnFetchResult(data, numReceivedSamples);
             }
             
             String[] lines = stringBuffer.toString().split("\n");
@@ -206,6 +208,7 @@ public class GsnMultiDataFetcher {
                 if(inputLine.startsWith("#")) {
                     continue;
                 }
+                numReceivedSamples++;
                 if(inputLine.contains("null")) {
                     continue;
                 }
@@ -255,7 +258,7 @@ public class GsnMultiDataFetcher {
         long fetchEnd = System.currentTimeMillis();
         log.debug("Query = " + dataSourceUrlStr + ", time = " + (fetchEnd-fetchStart));
 
-        return data;
+        return new GsnFetchResult(data, numReceivedSamples);
     }
 
     private Boolean tryStructureUpdate() {
@@ -304,5 +307,22 @@ public class GsnMultiDataFetcher {
             }
         }
         return true;
+    }
+    
+    /**
+     * This class defines a data type that is used for communication the result of the
+     * last download. The result consists of the valid samples plus the number of received
+     * (valid and invalid) lines.
+     * @author Matthias Keller
+     *
+     */
+    private class GsnFetchResult {
+        public Vector<TimedLocationValue> validSamples = null;
+        public int numReceivedSamples = 0;
+        
+        public GsnFetchResult(Vector<TimedLocationValue> validSamples, int numReceivedSamples) {
+            this.validSamples = validSamples;
+            this.numReceivedSamples = numReceivedSamples;
+        }
     }
 }
