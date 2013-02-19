@@ -60,8 +60,13 @@ public class MemCache extends AbstractCache {
     }
 
     private IndexedSignalData getCacheEntry(VizzlySignal signal, int windowLengthSec, Boolean updateStats) {
-        String identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
+        // First try with location, then without
+        String identifier = signal.getUniqueIdentifier() + ";loc" + '_' + Integer.valueOf(windowLengthSec).toString();
         IndexedSignalData s = cacheMap.get(identifier);
+        if(s == null) {
+            identifier = signal.getUniqueIdentifier() + '_' + Integer.valueOf(windowLengthSec).toString();
+            s = cacheMap.get(identifier);
+        }
         if(s == null) {
             if(updateStats) {
                 cacheRequests++;
