@@ -104,8 +104,6 @@ public class LocationAggregationGrid {
                     ret[idx] = null;
                     continue;
                 }
-                //double lat = _refLat+i*_distLat+0.5*_distLat;
-                //double lng = _refLng+j*_distLng+0.5*_distLng;
                 Location l = new Location(aggregatedLat[i][j].getAggregatedValue(), aggregatedLng[i][j].getAggregatedValue());
                 ret[idx] = new LocationValueAggregate(aggregatedValues[i][j], l);
             }

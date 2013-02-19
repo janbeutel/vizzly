@@ -185,7 +185,9 @@ public class VizzlySignal implements Serializable {
             selectStr += ","+deviceSelect.value;
         }
         
-        return dataSourceStr+";"+dataField+";"+selectStr+";"+timeField;
+        String locationStr = (hasLocation()) ? ";loc" : "";
+        
+        return dataSourceStr+";"+dataField+";"+selectStr+";"+timeField+locationStr;
     }
     
     public boolean hasLocation() {
