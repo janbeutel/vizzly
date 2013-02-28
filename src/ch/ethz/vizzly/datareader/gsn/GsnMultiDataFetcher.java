@@ -96,7 +96,7 @@ public class GsnMultiDataFetcher {
         }
 
         // There are also virtual sensors that require neither a device ID, nor a position
-        if(!signal.deviceSelect.type.toLowerCase().equals("all")) {
+        if(signal.specifiesSingleDevice()) {
             urlStringBuilder.append("&c_join[0]=and").append("&c_vs[0]=").append(signal.dataSource.name);
             urlStringBuilder.append("&c_field[0]="+signal.deviceSelect.field);
             urlStringBuilder.append("&c_min[0]=").append(Integer.parseInt(signal.deviceSelect.value)-1);

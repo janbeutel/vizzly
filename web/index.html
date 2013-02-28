@@ -33,6 +33,18 @@
             "mapCenter": new google.maps.LatLng(47.379022, 8.541001),
             "signals": [
             {
+                "displayName": "Particular matter",
+                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_minidisc_emb__mapped" },
+                "dataField": "number",
+                "deviceSelect": { "type": "all" },
+                "timeField": "generation_time",
+                "scaling": 1.0,
+                "visible": true,
+                "locationLatField": "latitude",
+                "locationLngField": "longitude",
+                "thresholds": [ 18.0, 8.0 ]
+            },
+            {
                 "displayName": "Ozone [ppb]",
                 "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
                 "dataField": "ozone_ppb",
