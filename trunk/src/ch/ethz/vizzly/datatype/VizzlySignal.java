@@ -94,6 +94,10 @@ public class VizzlySignal implements Serializable {
      */
     public static class DeviceSelect implements Serializable {
         private static final long serialVersionUID = 1L;
+        
+        public static String DEVICE_SELECT_ALL = "all";
+        public static String DEVICE_SELECT_SINGLE = "single";
+        
         public String type; /** either 'single' or 'all' */
         public String field; /** empty if 'all' */
         public String value; /** empty if 'all' */
@@ -180,7 +184,7 @@ public class VizzlySignal implements Serializable {
         dataSourceStr += dataSource.name;
         
         String selectStr = deviceSelect.type;
-        if(deviceSelect.type.equals("single")) {
+        if(deviceSelect.type.equals(DeviceSelect.DEVICE_SELECT_SINGLE)) {
             selectStr += ","+deviceSelect.field;
             selectStr += ","+deviceSelect.value;
         }
@@ -192,6 +196,10 @@ public class VizzlySignal implements Serializable {
     
     public boolean hasLocation() {
         return (locationLatField != null && !locationLatField.equals(""));
+    }
+    
+    public boolean specifiesSingleDevice() {
+        return deviceSelect.type.equals(DeviceSelect.DEVICE_SELECT_SINGLE);
     }
 
 }

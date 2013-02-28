@@ -81,7 +81,7 @@ public class VizzlyStateContainer {
             // Initialize caches
             Vector<CacheConfiguration> caches = new Vector<CacheConfiguration>();
             MemCache memCache = new MemCache();
-            caches.add(new CacheConfiguration(memCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC*4));
+            caches.add(new CacheConfiguration(memCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC));
             
             // Can only be activated when proper data source has been configured beforehand
             //SqlDbCache sqlDbCache = new SqlDbCache();
