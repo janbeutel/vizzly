@@ -37,8 +37,8 @@
         </javac>
     </target>
     <target name="minify">
-        <jsmin srcfile="${web}/vizzly.js" copyright="(c) 2012 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
-        <jsmin srcfile="${web}/vizzly.css" copyright="(c) 2012 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
+        <jsmin srcfile="${web}/vizzly.js" copyright="(c) 2013 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
+        <jsmin srcfile="${web}/vizzly.css" copyright="(c) 2013 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
     </target>
     <target name="war" depends="compile,minify">
 		<war destfile="${dist}/vizzly.war" needxmlfile="false">
@@ -69,7 +69,7 @@
 	           use="true"
 	           windowtitle="Vizzly">
 	    <doctitle><![CDATA[<h1>Vizzly</h1>]]></doctitle>
-	    <bottom><![CDATA[<i>Copyright &#169; 2012 ETH Zurich, Computer Engineering and Networks Laboratory.</i>]]></bottom>
+	    <bottom><![CDATA[<i>Copyright &#169; 2013 ETH Zurich, Computer Engineering and Networks Laboratory.</i>]]></bottom>
 	    <link href="http://developer.java.sun.com/developer/products/xml/docs/api/"/>
 	  </javadoc>
 	</target>
