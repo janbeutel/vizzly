@@ -23,6 +23,7 @@ import javax.servlet.annotation.WebListener;
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.CacheUpdateWorkerSynchronization;
+import ch.ethz.vizzly.datatype.VizzlyException;
 
 /**
  * This class takes care of background cache updater threads and the initialization
@@ -34,7 +35,7 @@ import ch.ethz.vizzly.cache.CacheUpdateWorkerSynchronization;
 public class VizzlyServletContextListener implements ServletContextListener {
 
     private final int NUM_UPDATE_WORKERS = 4;
-    
+
     /**
      * Log.
      */
@@ -43,17 +44,18 @@ public class VizzlyServletContextListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         // Enable DNS caching, very useful when GSN data sources are used
         java.security.Security.setProperty("networkaddress.cache.ttl", "14400");
-  
+
         // Initialize state object
-        VizzlyStateContainer vizzlyState = new VizzlyStateContainer();
+        VizzlyStateContainer vizzlyState = new VizzlyStateContainer(null);
         sce.getServletContext().setAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY, vizzlyState);
-        
+
         // Initialize cache
         CacheUpdateWorkerSynchronization workerSync = new CacheUpdateWorkerSynchronization(vizzlyState);
         sce.getServletContext().setAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY, workerSync);
         workerSync.startUpdaterThreads(NUM_UPDATE_WORKERS);
-        
+
         log.info("Vizzly started successfully.");
+
     }
 
     public void contextDestroyed(ServletContextEvent sce){

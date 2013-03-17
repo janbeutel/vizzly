@@ -14,33 +14,32 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.datatype;
-
-import java.io.Serializable;
+package ch.ethz.vizzly.datatype.readings;
 
 /**
- * This class implements a data type that represents a single measurement (value).
+ * This class implements a data type that allows to aggregate values that
+ * belong to the same location.
  * @author Matthias Keller
  *
  */
-public class Value implements Serializable {
+public class LocationValueAggregate extends ValueAggregate {
 
-    static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
     
-    public double value;
+    private Location location = null;
     
-    protected static final double NULL_VALUE = -9999;
-    
-    public Value() {
-        value = NULL_VALUE;
+    public LocationValueAggregate() {
+        super();
     }
     
-    public Value(double value) {
-        this.value = value;
+    public LocationValueAggregate(ValueAggregate agg, Location location) {
+        this.aggSum = agg.aggSum;
+        this.numSamples = agg.numSamples;
+        this.location = location;
     }
     
-    public Boolean isNull() {
-        return value == NULL_VALUE;
+    public Location getLocation() {
+        return location;
     }
     
 }

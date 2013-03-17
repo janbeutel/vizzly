@@ -18,12 +18,12 @@ package ch.ethz.vizzly;
 
 import java.util.Vector;
 
-import ch.ethz.vizzly.cache.CacheConfiguration;
 import ch.ethz.vizzly.cache.CacheManager;
 import ch.ethz.vizzly.cache.memory.MemCache;
 import ch.ethz.vizzly.datareader.CsvDataReader;
 import ch.ethz.vizzly.datareader.DataReaderRegistry;
 import ch.ethz.vizzly.datareader.gsn.GsnDataReader;
+import ch.ethz.vizzly.datatype.CacheConfiguration;
 import ch.ethz.vizzly.performance.AbstractPerformanceTracker;
 import ch.ethz.vizzly.performance.DummyPerformanceTracker;
 
@@ -58,11 +58,11 @@ public class VizzlyStateContainer {
     private AbstractPerformanceTracker perfTracker = null;
     
 
-    public VizzlyStateContainer() {
-       initStateContainer(); 
+    public VizzlyStateContainer(VizzlyConfiguration config) {
+       initStateContainer(config); 
     }
     
-    private synchronized void initStateContainer() {
+    private synchronized void initStateContainer(VizzlyConfiguration config) {
         if(!stateInitialized) {
             dataReaderRegistry = new DataReaderRegistry();
             

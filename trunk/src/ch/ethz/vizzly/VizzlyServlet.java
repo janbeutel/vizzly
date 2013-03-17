@@ -18,13 +18,27 @@ package ch.ethz.vizzly;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.dbcp.ConnectionFactory;
+import org.apache.commons.dbcp.DriverManagerConnectionFactory;
+import org.apache.commons.dbcp.PoolableConnectionFactory;
+import org.apache.commons.dbcp.PoolingDriver;
+import org.apache.commons.pool.ObjectPool;
+import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.CacheManager;
@@ -45,19 +59,51 @@ import com.google.gson.Gson;
 public class VizzlyServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
-    
+
     private final int DEFAULT_CANVAS_WIDTH = 600;
-    
+
     private final int DEFAULT_CANVAS_HEIGHT = 400;
-    
+
     private final int MAX_CANVAS_WIDTH = 10000;
-    
+
     private final int MAX_CANVAS_HEIGHT = 6000;
+
+    private final String CONFIG_FILE_NAME = "vizzly.xml";
 
     /**
      * Log.
      */
     private static Logger log = Logger.getLogger(VizzlyServlet.class);
+
+    /**
+     * Load configuration file and setup database connection. Stop servlet on error.
+     */
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config); 
+        try {
+            String configPath = config.getServletContext().getRealPath("/WEB-INF");
+            VizzlyConfiguration vizzlyConf = VizzlyConfiguration.fromXmlFile(configPath+"/"+CONFIG_FILE_NAME);
+            config.getServletContext().setAttribute(VizzlyConfiguration.SERVLET_ATTRIB_KEY, vizzlyConf);
+            /*
+            if(vizzlyConf.useSqlDatabase()) {
+                BasicDataSource ds = new BasicDataSource();
+                ds.setDriverClassName(vizzlyConf.getJdbcDriver());
+                ds.setUsername(vizzlyConf.getJdbcUser());
+                ds.setPassword(vizzlyConf.getJdbcPassword());
+                ds.setUrl(vizzlyConf.getJdbcUrl());
+                ds.setTestOnBorrow(true);
+                ds.setValidationQuery("SELECT 1");
+                Context ctx = new InitialContext();
+                ctx.bind("jdbc/VizzlyDS", ds);
+            }
+            */
+        } catch(VizzlyException e) {
+            throw new ServletException(e.getLocalizedMessage());
+        //} catch(NamingException e) {
+        //    throw new ServletException(e.getLocalizedMessage());
+        }
+    }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -97,7 +143,7 @@ public class VizzlyServlet extends HttpServlet {
         String canvasHeightParam = req.getParameter("canvasHeight");
         // Enforce the loading of unaggregated data
         String forceLoadUnaggregatedParam = req.getParameter("forceLoadUnaggregated");
-        
+
         // JSON string from HTTP request
         StringBuffer jsonReq = new StringBuffer();
         String line = null;
@@ -116,7 +162,7 @@ public class VizzlyServlet extends HttpServlet {
                 return;
             }
         }
-        
+
         // Convert JSON into Java object
         Gson gson = new Gson();
         VizzlySignal[] signals = null;
@@ -127,7 +173,7 @@ public class VizzlyServlet extends HttpServlet {
             // From POST contents
             signals = gson.fromJson(jsonReq.toString(), VizzlySignal[].class);
         }
-        
+
         // Check if anything useful was included
         if(statsParam == null) {
             if(signals == null || signals.length == 0) {
@@ -157,7 +203,7 @@ public class VizzlyServlet extends HttpServlet {
         if(timeEndParam != null && !timeEndParam.toLowerCase().equals("nan")) {
             timeFilterEnd = Long.parseLong(timeEndParam);
         }
-        
+
         if(mapBoundsParam != null) {
             String[] s = mapBoundsParam.split(",");
             latSW = Double.parseDouble(s[0]);
@@ -165,7 +211,7 @@ public class VizzlyServlet extends HttpServlet {
             latNE = Double.parseDouble(s[2]);
             lngNE = Double.parseDouble(s[3]);
         }
-        
+
         canvasWidth = DEFAULT_CANVAS_WIDTH;
         canvasHeight = DEFAULT_CANVAS_HEIGHT;
         if(canvasWidthParam != null) {
@@ -202,8 +248,8 @@ public class VizzlyServlet extends HttpServlet {
     private void getTimedDataCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
             Double lngSW, Double latNE, Double lngNE, boolean forceLoadUnaggregated, int canvasWidth, 
             HttpServletResponse resp, UserRequestPerformanceMeasurement reqMeas)
-            throws IOException
-            {
+                    throws IOException
+                    {
         VizzlyStateContainer vizzlyState = 
                 (VizzlyStateContainer)getServletContext().getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
         // Respond with CSV
@@ -223,7 +269,7 @@ public class VizzlyServlet extends HttpServlet {
         reqMeas.setEnd();
         vizzlyState.getPerformanceTracker().addUserRequestMeasurement(reqMeas);
         vizzlyState.incrNumberOfRequests();
-            }
+                    }
 
     private void getAggregationMapCSV(VizzlySignal[] signals, Long timeFilterStart, Long timeFilterEnd, Double latSW, 
             Double lngSW, Double latNE, Double lngNE, int canvasWidth, int canvasHeight, HttpServletResponse resp,
@@ -257,7 +303,7 @@ public class VizzlyServlet extends HttpServlet {
         VizzlyStateContainer vizzlyState = 
                 (VizzlyStateContainer)getServletContext().getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
         CacheManager cache = vizzlyState.getCacheManager();
-        
+
         sb.append("uptime="+cache.getUptime(0));
         sb.append(",");
         sb.append("requests="+vizzlyState.getNumberOfRequests());

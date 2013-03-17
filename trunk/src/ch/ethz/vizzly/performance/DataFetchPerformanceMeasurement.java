@@ -25,7 +25,7 @@ package ch.ethz.vizzly.performance;
 public class DataFetchPerformanceMeasurement {
 
     public enum DataBackend {
-        DIRECTACCESS, MEMCACHE, MYSQLDBCACHE, LIVEAGGREGATION, UNDEFINED
+        DIRECTACCESS, MEMCACHE, SQLDBCACHE, LIVEAGGREGATION, UNDEFINED
     }
 
     /* Time of measurement in millisec */
@@ -69,7 +69,7 @@ public class DataFetchPerformanceMeasurement {
         case MEMCACHE:
             ret = "memcache";
             break;
-        case MYSQLDBCACHE:
+        case SQLDBCACHE:
             ret = "mysqldbcache";
             break;
         case LIVEAGGREGATION:

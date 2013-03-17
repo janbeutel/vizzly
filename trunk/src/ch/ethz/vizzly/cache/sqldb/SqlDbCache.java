@@ -35,9 +35,9 @@ import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.AbstractCache;
 import ch.ethz.vizzly.datatype.CachedDataInfo;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
-import ch.ethz.vizzly.datatype.TimedValue;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
+import ch.ethz.vizzly.datatype.readings.TimedValue;
 import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement.DataBackend;
 import ch.ethz.vizzly.util.DataAggregationUtil;
 import ch.ethz.vizzly.util.TimestampTruncateUtil;
@@ -114,7 +114,7 @@ public class SqlDbCache extends AbstractCache {
         seenSignalsEntryIds = new ConcurrentHashMap<VizzlySignal, Integer>();
         cacheMeta = new ConcurrentHashMap<Integer, SqlDbCacheMetaEntry>();
         cacheIdLookup = new ConcurrentHashMap<VizzlySignal, HashMap<Integer, Integer>>();
-        dataBackend = DataBackend.MYSQLDBCACHE;
+        dataBackend = DataBackend.SQLDBCACHE;
 
         try {
 

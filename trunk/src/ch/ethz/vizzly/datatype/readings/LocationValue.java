@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.datatype;
+package ch.ethz.vizzly.datatype.readings;
 
 /**
  * This class implements a data type that represents a measurements with attached

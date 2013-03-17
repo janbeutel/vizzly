@@ -19,10 +19,10 @@ package ch.ethz.vizzly.util;
 import java.util.HashMap;
 import java.util.Vector;
 
-import ch.ethz.vizzly.datatype.Location;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
-import ch.ethz.vizzly.datatype.TimedValue;
-import ch.ethz.vizzly.datatype.ValueAggregate;
+import ch.ethz.vizzly.datatype.readings.Location;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
+import ch.ethz.vizzly.datatype.readings.TimedValue;
+import ch.ethz.vizzly.datatype.readings.ValueAggregate;
 
 /**
  * This class provides various functions for aggregating time series data. Functions differ

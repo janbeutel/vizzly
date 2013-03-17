@@ -19,9 +19,9 @@ package ch.ethz.vizzly.datareader;
 import java.util.Vector;
 
 import ch.ethz.vizzly.datatype.VizzlyException;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
 
 /**
  * This class defines the interface of a data reader.

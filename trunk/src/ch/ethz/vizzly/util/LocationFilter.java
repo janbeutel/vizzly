@@ -18,8 +18,8 @@ package ch.ethz.vizzly.util;
 
 import java.util.Vector;
 
-import ch.ethz.vizzly.datatype.TimedLocationValue;
-import ch.ethz.vizzly.datatype.ValueAggregate;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
+import ch.ethz.vizzly.datatype.readings.ValueAggregate;
 
 /**
  * This class provides two functions for filtering and aggregating time series by

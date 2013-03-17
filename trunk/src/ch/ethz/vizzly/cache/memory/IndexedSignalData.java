@@ -26,10 +26,10 @@ import java.util.Vector;
 
 import org.apache.log4j.Logger;
 
-import ch.ethz.vizzly.datatype.TimedLocationValue;
-import ch.ethz.vizzly.datatype.TimedValue;
-import ch.ethz.vizzly.datatype.Value;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
+import ch.ethz.vizzly.datatype.readings.TimedValue;
+import ch.ethz.vizzly.datatype.readings.Value;
 import ch.ethz.vizzly.util.DataAggregationUtil;
 import ch.ethz.vizzly.util.TimestampTruncateUtil;
 

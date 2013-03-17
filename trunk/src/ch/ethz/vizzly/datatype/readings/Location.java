@@ -14,44 +14,38 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.datatype;
+package ch.ethz.vizzly.datatype.readings;
 
 import java.io.Serializable;
 
 /**
- * This class implements a data type that makes calculating the mean of a number
- * of accumulated data points easier.
+ * This class implements a data type that represents a location.
  * @author Matthias Keller
  *
  */
-public class ValueAggregate implements Serializable {
+public class Location implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    protected double aggSum;
+    public double latitude;
+    public double longitude;
     
-    protected int numSamples;
-    
-    public ValueAggregate() {
-        reset();
+    public Location(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
     
-    public void addValue(double value) {
-        aggSum += value;
-        numSamples++;
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Location)) return false;
+        Location otherValue = (Location)other;
+        
+        return this.latitude == otherValue.latitude 
+                && this.longitude == otherValue.longitude;
     }
     
-    public double getAggregatedValue() {
-        return aggSum/(double)numSamples;
-    }
-    
-    public int getNumSamples() {
-        return numSamples;
-    }
-    
-    public void reset() {
-        aggSum = 0.0;
-        numSamples = 0;
+    public int hashCode() {
+        return (int)(latitude*100)+(int)(longitude*10000);
     }
     
 }
