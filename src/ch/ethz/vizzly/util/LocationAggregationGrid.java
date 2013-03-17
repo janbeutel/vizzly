@@ -18,10 +18,10 @@ package ch.ethz.vizzly.util;
 
 import org.apache.log4j.Logger;
 
-import ch.ethz.vizzly.datatype.Location;
-import ch.ethz.vizzly.datatype.LocationValue;
-import ch.ethz.vizzly.datatype.LocationValueAggregate;
-import ch.ethz.vizzly.datatype.ValueAggregate;
+import ch.ethz.vizzly.datatype.readings.Location;
+import ch.ethz.vizzly.datatype.readings.LocationValue;
+import ch.ethz.vizzly.datatype.readings.LocationValueAggregate;
+import ch.ethz.vizzly.datatype.readings.ValueAggregate;
 
 /**
  * This class implements a grid that is used for generating aggregated 2D maps.

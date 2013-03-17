@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.cache;
+package ch.ethz.vizzly.datatype;
+
+import ch.ethz.vizzly.cache.AbstractCache;
 
 /**
  * This class implements a simple data type for assigning a aggregation

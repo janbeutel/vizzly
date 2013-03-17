@@ -21,8 +21,8 @@ import java.util.Date;
 import java.util.Vector;
 
 import ch.ethz.vizzly.datatype.CachedDataInfo;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
 import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement.DataBackend;
 
 /**

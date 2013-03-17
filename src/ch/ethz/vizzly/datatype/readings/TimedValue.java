@@ -14,44 +14,33 @@
  * limitations under the License.
  */
 
-package ch.ethz.vizzly.datatype;
+package ch.ethz.vizzly.datatype.readings;
 
 /**
- * This class implements a data type that represents a measurement including
- * time and location information.
+ * This class implements a data type that represents a measured value with attached
+ * time information.
  * @author Matthias Keller
  *
  */
-public class TimedLocationValue extends LocationValue {
+public class TimedValue extends Value {
 
     private static final long serialVersionUID = 1L;
     
     public long timestamp;
     
-    public TimedLocationValue() {
+    public TimedValue() {
         super();
         timestamp = 0L;
     }
     
-    public TimedLocationValue(long timestamp, double value) {
+    public TimedValue(long timestamp, double value) {
         super(value);
         this.timestamp = timestamp;
     }
     
-    public TimedLocationValue(long timestamp, double value, double locationLat, double locationLon) {
-        super(value, locationLat, locationLon);
+    public TimedValue(long timestamp, Value value) {
+        super(value.value);
         this.timestamp = timestamp;
     }
-    
-    public TimedLocationValue(long timestamp, double value, Location location) {
-        super(value, location);
-        this.timestamp = timestamp;
-    }
-    
-    public TimedLocationValue(long timestamp, LocationValue v) {
-        super(v.value, v.location);
-        this.timestamp = timestamp;
-    }
-    
        
 }

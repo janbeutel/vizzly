@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 ETH Zurich, Computer Engineering and Networks Laboratory
+ * Copyright 2013 ETH Zurich, Computer Engineering and Networks Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,22 @@
 package ch.ethz.vizzly.datatype;
 
 /**
- * This class implements a data type that represents a measured value with attached
- * time information.
+ * This class implements a data structure that defines a cache specification made
+ * in the XML configuration file of Vizzly.
  * @author Matthias Keller
  *
  */
-public class TimedValue extends Value {
+public class CacheSpec {
 
-    private static final long serialVersionUID = 1L;
+    public static final String CACHE_TYPE_MEM = "memcache";
     
-    public long timestamp;
+    public static final String CACHE_TYPE_SQL = "sqlcache";
     
-    public TimedValue() {
-        super();
-        timestamp = 0L;
-    }
+    public String type;
     
-    public TimedValue(long timestamp, double value) {
-        super(value);
-        this.timestamp = timestamp;
-    }
+    public int windowLength;
     
-    public TimedValue(long timestamp, Value value) {
-        super(value.value);
-        this.timestamp = timestamp;
-    }
-       
+    public CacheSpec() {}
+
+
 }

@@ -24,8 +24,8 @@ import java.util.Vector;
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.datatype.VizzlyException;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
-import ch.ethz.vizzly.datatype.ValueAggregate;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
+import ch.ethz.vizzly.datatype.readings.ValueAggregate;
 
 /**
  * This class implements a data structure that maintains monthly estimates of the

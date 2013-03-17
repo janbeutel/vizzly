@@ -28,9 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.CacheManager;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
 
 /**
  * This class calculates the returned level of detail for a request. Given a requested signal including

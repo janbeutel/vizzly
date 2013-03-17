@@ -29,10 +29,10 @@ import java.util.Vector;
 
 import org.apache.log4j.Logger;
 
-import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
 
 /**
  * This class implements a data reader that uses CSV files as input. 

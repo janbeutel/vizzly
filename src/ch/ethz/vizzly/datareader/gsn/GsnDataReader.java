@@ -24,10 +24,10 @@ import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.datareader.AbstractDataReader;
 import ch.ethz.vizzly.datatype.ServerSpec;
-import ch.ethz.vizzly.datatype.TimedLocationValue;
 import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.datatype.VizzlyInvalidSignalException;
 import ch.ethz.vizzly.datatype.VizzlySignal;
+import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
 
 /**
  * This class distributed GSN read requests to the respective GSN servers.
