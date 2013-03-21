@@ -16,15 +16,20 @@
 
 package ch.ethz.vizzly;
 
+import java.util.Collections;
 import java.util.Vector;
 
+import ch.ethz.vizzly.cache.CacheFactory;
 import ch.ethz.vizzly.cache.CacheManager;
 import ch.ethz.vizzly.cache.memory.MemCache;
 import ch.ethz.vizzly.datareader.CsvDataReader;
 import ch.ethz.vizzly.datareader.DataReaderRegistry;
 import ch.ethz.vizzly.datareader.gsn.GsnDataReader;
 import ch.ethz.vizzly.datatype.CacheConfiguration;
+import ch.ethz.vizzly.datatype.CacheSpec;
+import ch.ethz.vizzly.datatype.VizzlyException;
 import ch.ethz.vizzly.performance.AbstractPerformanceTracker;
+import ch.ethz.vizzly.performance.DbPerformanceTracker;
 import ch.ethz.vizzly.performance.DummyPerformanceTracker;
 
 /**
@@ -58,11 +63,11 @@ public class VizzlyStateContainer {
     private AbstractPerformanceTracker perfTracker = null;
     
 
-    public VizzlyStateContainer(VizzlyConfiguration config) {
+    public VizzlyStateContainer(VizzlyConfiguration config) throws VizzlyException {
        initStateContainer(config); 
     }
     
-    private synchronized void initStateContainer(VizzlyConfiguration config) {
+    private synchronized void initStateContainer(VizzlyConfiguration config) throws VizzlyException {
         if(!stateInitialized) {
             dataReaderRegistry = new DataReaderRegistry();
             
@@ -75,21 +80,24 @@ public class VizzlyStateContainer {
             dataReaderRegistry.addDataReader("csv", csvDataReader);
             
             // Initialize performance tracker
-            perfTracker = new DummyPerformanceTracker();
-            //perfTracker = new DbPerformanceTracker();
+            if(config.useSqlDatabase() && config.isPerformanceTrackerEnabled()) {
+                perfTracker = new DbPerformanceTracker();
+            } else {
+                perfTracker = new DummyPerformanceTracker();
+            }
             
             // Initialize caches
+            Vector<CacheSpec> configCaches = config.getCacheList();
+          
+            // Caches are assumed to be sorted by its ascending window length
+            Collections.sort(configCaches);
+          
+            // Create caches as specified in configuration file
             Vector<CacheConfiguration> caches = new Vector<CacheConfiguration>();
-            MemCache memCache = new MemCache();
-            caches.add(new CacheConfiguration(memCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC));
-            
-            // Can only be activated when proper data source has been configured beforehand
-            //SqlDbCache sqlDbCache = new SqlDbCache();
-            //caches.add(new CacheConfiguration(sqlDbCache, AggregationLevelLookup.MIN_WINDOW_LENGTH_SEC));
-
-            // TODO: Order caches by ascending window length
+            for(CacheSpec s : configCaches) {
+                caches.add(new CacheConfiguration(CacheFactory.createCache(s), s.windowLength));
+            }
             cacheManager = new CacheManager(caches, dataReaderRegistry, perfTracker);
-
             stateInitialized = true;
         }
     }

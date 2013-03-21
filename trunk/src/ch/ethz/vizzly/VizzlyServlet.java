@@ -27,6 +27,7 @@ import javax.naming.NamingException;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.UnavailableException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -67,8 +68,12 @@ public class VizzlyServlet extends HttpServlet {
     private final int MAX_CANVAS_WIDTH = 10000;
 
     private final int MAX_CANVAS_HEIGHT = 6000;
-
-    private final String CONFIG_FILE_NAME = "vizzly.xml";
+    
+    /**
+     * The servlet will respond to any request with a HTTP 500 
+     * message if this variable is set to true.
+     */
+    private Boolean stopDueToError = false;
 
     /**
      * Log.
@@ -81,37 +86,24 @@ public class VizzlyServlet extends HttpServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config); 
-        try {
-            String configPath = config.getServletContext().getRealPath("/WEB-INF");
-            VizzlyConfiguration vizzlyConf = VizzlyConfiguration.fromXmlFile(configPath+"/"+CONFIG_FILE_NAME);
-            config.getServletContext().setAttribute(VizzlyConfiguration.SERVLET_ATTRIB_KEY, vizzlyConf);
-            /*
-            if(vizzlyConf.useSqlDatabase()) {
-                BasicDataSource ds = new BasicDataSource();
-                ds.setDriverClassName(vizzlyConf.getJdbcDriver());
-                ds.setUsername(vizzlyConf.getJdbcUser());
-                ds.setPassword(vizzlyConf.getJdbcPassword());
-                ds.setUrl(vizzlyConf.getJdbcUrl());
-                ds.setTestOnBorrow(true);
-                ds.setValidationQuery("SELECT 1");
-                Context ctx = new InitialContext();
-                ctx.bind("jdbc/VizzlyDS", ds);
-            }
-            */
-        } catch(VizzlyException e) {
-            throw new ServletException(e.getLocalizedMessage());
-        //} catch(NamingException e) {
-        //    throw new ServletException(e.getLocalizedMessage());
-        }
+        stopDueToError = (Boolean)config.getServletContext().getAttribute(VizzlyServletContextListener.INIT_ERROR_ATTRIB_KEY);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        if(stopDueToError) {
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Configuration error");
+            return;
+        }
         processRequest(req, resp);
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        if(stopDueToError) {
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Configuration error");
+            return;
+        }
         processRequest(req, resp);
     }
 
@@ -154,7 +146,7 @@ public class VizzlyServlet extends HttpServlet {
         } catch (Exception e) {
             log.error(e.getLocalizedMessage());
         }
-
+        
         // Check if the user sent a valid request
         if(statsParam == null) {
             if(signalsParam == null && jsonReq.length() == 0) {
@@ -173,7 +165,7 @@ public class VizzlyServlet extends HttpServlet {
             // From POST contents
             signals = gson.fromJson(jsonReq.toString(), VizzlySignal[].class);
         }
-
+     
         // Check if anything useful was included
         if(statsParam == null) {
             if(signals == null || signals.length == 0) {
@@ -181,7 +173,7 @@ public class VizzlyServlet extends HttpServlet {
                 return;
             }
         }
-
+     
         if(signals != null) {
             try {
                 VizzlyStateContainer vizzlyState = 
@@ -194,7 +186,7 @@ public class VizzlyServlet extends HttpServlet {
                 return;
             }
         }
-
+  
         // Some (broken) browsers send "NaN" values, probably related to
         // varying JavaScript Date support (http://dygraphs.com/date-formats.html)
         if(timeStartParam != null && !timeStartParam.toLowerCase().equals("nan")) {
@@ -226,7 +218,7 @@ public class VizzlyServlet extends HttpServlet {
                 canvasHeight = MAX_CANVAS_HEIGHT;
             }
         }
-
+ 
         if(aggMapParam != null) {
             // Respond with map grid data
             getAggregationMapCSV(signals, timeFilterStart, timeFilterEnd, latSW, lngSW, latNE, lngNE, canvasWidth, canvasHeight, resp, reqMeas);

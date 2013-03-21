@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<vizzlyConfig numWorkerThreads="2" enablePerformanceTracker="false">
+	<!-- <database jdbcDriver="com.mysql.jdbc.Driver" jdbcUrl="jdbc:mysql://host:3306/vizzly" jdbcUser="USER" jdbcPassword="PASS" /> -->
+	<caches>
+		<memoryCache windowLengthSec="240" />
+		<!-- <sqlDbCache windowLengthSec="240" /> -->
+	</caches>
+</vizzlyConfig>
