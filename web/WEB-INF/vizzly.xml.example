@@ -1,8 +1,27 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!-- Vizzly will start a number of background threads that are used for continuously fetching the most recent data from all data sources known.
+        In combination with a SQL database, the performance tracker can be used to collect runtime statistics. -->
 <vizzlyConfig numWorkerThreads="2" enablePerformanceTracker="false">
+
+	<!-- Uncomment the following line to setup a database connection. A database connection is required for the performance tracker
+            as well as for a SQL cache to work -->
 	<!-- <database jdbcDriver="com.mysql.jdbc.Driver" jdbcUrl="jdbc:mysql://host:3306/vizzly" jdbcUser="USER" jdbcPassword="PASS" /> -->
+	
+	<!-- 
+	       In principle you can define as many caches as you want. In reality something will break right now if there is more than one
+	       SQL DB cache configured. 
+	
+	       Ideally, the window lengths of different caches should be multiples of the smallest window length used. The configuration we use
+	       is to have a SQL cache with 240sec window length and a memory cache with 960sec window length. The larger the window length over which
+	       data is aggregated, the less space for storing aggregates is needed.
+	-->
 	<caches>
 		<memoryCache windowLengthSec="240" />
+
+		<!-- Uncomment the following line to enable the SQL cache. The database configuration must be configured as well for this to work.
+		      Please not that changing windowLengthSec requires you to drop all existing data tables - otherwise strange things will happen -->
 		<!-- <sqlDbCache windowLengthSec="240" /> -->
+
 	</caches>
 </vizzlyConfig>
