@@ -1,0 +1,7 @@
+#summary Configuration of database connection etc.
+
+A template for the configuration file that Vizzly uses is provided in _web/WEB-INF/vizzly.xml.example_
+
+This file will automatically be copied into _./jetty-deploy/webapps/root/WEB-INF/vizzly.xml_ when running `ant jetty-deploy` for the first time.
+
+More details will follow soon.
