@@ -59,7 +59,7 @@
 			</fileset>
 		</copy>
 		<copy file="${web}/WEB-INF/vizzly.xml.example" tofile="${deploy.jetty}/WEB-INF/vizzly.xml" overwrite="false" />
-		<copy file="jetty-runtime/vizzly/jetty-filters.xml" tofile="${deploy.jetty}/WEB-INF" />
+		<copy file="jetty-runtime/vizzly/jetty-filters.xml" tofile="${deploy.jetty}/WEB-INF/web.xml" />
 		<copy toDir="${deploy.jetty}/WEB-INF/classes">
 			<fileset dir="${build}" />
 		</copy>
