@@ -16,13 +16,15 @@
 
 package ch.ethz.vizzly.datatype;
 
+import java.util.HashMap;
+
 /**
- * This class implements a data structure that defines a cache specification made
+ * This class implements a data structure that represents a cache specification made
  * in the XML configuration file of Vizzly.
  * @author Matthias Keller
  *
  */
-public class CacheSpec {
+public class CacheSpec implements Comparable<CacheSpec> {
 
     public static final String CACHE_TYPE_MEM = "memcache";
     
@@ -32,7 +34,19 @@ public class CacheSpec {
     
     public int windowLength;
     
-    public CacheSpec() {}
-
+    public HashMap<String, String> optionalParameters = null;
+    
+    public CacheSpec() {
+        optionalParameters = new HashMap<String, String>();
+    }
+    
+    public int compareTo(CacheSpec other) {
+        if(other.windowLength > this.windowLength) {
+            return -1;
+        } else if(this.windowLength > other.windowLength) {
+            return 1;
+        }
+        return 0;
+    }
 
 }

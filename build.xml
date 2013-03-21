@@ -3,7 +3,7 @@
     <!-- Paths for build outputs -->
     <property name="build" location="./build"/>
     <property name="dist" location="./dist"/>
-	<property name="deploy.jetty" location="./jetty-runtime/webapps/root.war"/>
+	<property name="deploy.jetty" location="./jetty-runtime/webapps/root"/>
     <!-- Paths for sources -->
     <property name="src" location="./src"/>
     <property name="lib" location="./lib"/>
@@ -43,26 +43,29 @@
         <jsmin srcfile="${web}/vizzly.css" copyright="(c) 2013 ETH Zurich, Computer Engineering and Networks Laboratory" suffix="true" />
     </target>
     <target name="war" depends="compile,minify">
+		<copy file="${web}/WEB-INF/vizzly.xml.example" tofile="${web}/WEB-INF/vizzly.xml" overwrite="false" />
 		<war destfile="${dist}/vizzly.war" needxmlfile="false">
 			<fileset dir="${web}">
-                <exclude name="WEB-INF/jetty-env*"/>
-				<exclude name="WEB-INF/vizzly.xml.example"/>
+    			<exclude name="WEB-INF/vizzly.xml.example"/>
             </fileset>
             <lib dir="${lib}"/>
 			<classes dir="${build}"/>
 		</war>
 	</target>
 	<target name="jetty-deploy" depends="compile,minify">
-		<war destfile="dist/root-jetty.war" webxml="jetty-runtime/vizzly/jetty-filters.xml">
+		<copy toDir="${deploy.jetty}">
 			<fileset dir="${web}">
-			    <!-- <exclude name="WEB-INF/jetty-env*"/> -->
-			    <exclude name="WEB-INF/jetty-env.xml.example"/>
-				<exclude name="WEB-INF/vizzly.xml.example"/>
+				<exclude name="WEB-INF/vizzly.xml*"/>
 			</fileset>
-			<lib dir="${lib}"/>
-			<classes dir="${build}"/>
-		</war>
-		<copy file="${dist}/root-jetty.war" tofile="${deploy.jetty}" />
+		</copy>
+		<copy file="${web}/WEB-INF/vizzly.xml.example" tofile="${deploy.jetty}/WEB-INF/vizzly.xml" overwrite="false" />
+		<copy file="jetty-runtime/vizzly/jetty-filters.xml" tofile="${deploy.jetty}/WEB-INF" />
+		<copy toDir="${deploy.jetty}/WEB-INF/classes">
+			<fileset dir="${build}" />
+		</copy>
+		<copy toDir="${deploy.jetty}/WEB-INF/lib">
+			<fileset dir="${lib}" />
+		</copy>
 	</target>
    <target name="generate-doc">
 	  <javadoc packagenames="ch.ethz.vizzly.*"

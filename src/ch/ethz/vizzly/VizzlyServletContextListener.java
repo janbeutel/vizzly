@@ -16,10 +16,14 @@
 
 package ch.ethz.vizzly;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
+import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.log4j.Logger;
 
 import ch.ethz.vizzly.cache.CacheUpdateWorkerSynchronization;
@@ -34,27 +38,60 @@ import ch.ethz.vizzly.datatype.VizzlyException;
 @WebListener 
 public class VizzlyServletContextListener implements ServletContextListener {
 
-    private final int NUM_UPDATE_WORKERS = 4;
+    private final String CONFIG_FILE_NAME = "vizzly.xml";
 
     /**
      * Log.
      */
     private static Logger log = Logger.getLogger(VizzlyServletContextListener.class);
+    
+    public static final String INIT_ERROR_ATTRIB_KEY = "initError";
 
     public void contextInitialized(ServletContextEvent sce) {
         // Enable DNS caching, very useful when GSN data sources are used
         java.security.Security.setProperty("networkaddress.cache.ttl", "14400");
 
-        // Initialize state object
-        VizzlyStateContainer vizzlyState = new VizzlyStateContainer(null);
-        sce.getServletContext().setAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY, vizzlyState);
+        Boolean initError = false;
+        try{
+            
+            // Open config XML
+            String configPath = sce.getServletContext().getRealPath("/WEB-INF");
+            VizzlyConfiguration vizzlyConfig = VizzlyConfiguration.fromXmlFile(configPath+"/"+CONFIG_FILE_NAME);
+            
+            // Setup of (pooled) database connection
+            if(vizzlyConfig.useSqlDatabase()) {
+                BasicDataSource ds = new BasicDataSource();
+                ds.setDriverClassName(vizzlyConfig.getJdbcDriver());
+                ds.setUsername(vizzlyConfig.getJdbcUser());
+                ds.setPassword(vizzlyConfig.getJdbcPassword());
+                ds.setUrl(vizzlyConfig.getJdbcUrl());
+                ds.setTestOnBorrow(true);
+                ds.setValidationQuery("SELECT 1");
+                Context ctx = new InitialContext();
+                ctx.bind("VizzlyDS", ds);
+            }
+     
+            // Initialize state object
+            VizzlyStateContainer vizzlyState = new VizzlyStateContainer(vizzlyConfig);
+            sce.getServletContext().setAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY, vizzlyState);
+            
+            // Initialize cache update workers
+            CacheUpdateWorkerSynchronization workerSync = new CacheUpdateWorkerSynchronization(vizzlyState);
+            sce.getServletContext().setAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY, workerSync);
+            workerSync.startUpdaterThreads(vizzlyConfig.getNumWorkerThreads());
 
-        // Initialize cache
-        CacheUpdateWorkerSynchronization workerSync = new CacheUpdateWorkerSynchronization(vizzlyState);
-        sce.getServletContext().setAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY, workerSync);
-        workerSync.startUpdaterThreads(NUM_UPDATE_WORKERS);
+            log.info("Vizzly started successfully.");
 
-        log.info("Vizzly started successfully.");
+        } catch(VizzlyException e) {
+            log.error(e.getLocalizedMessage());
+            initError = true;
+        } catch(NamingException e) {
+            log.error(e.getLocalizedMessage());
+            initError = true;
+        } finally {
+            // Tell the servlet to show an error 500
+            sce.getServletContext().setAttribute(INIT_ERROR_ATTRIB_KEY, initError);
+        }
 
     }
 

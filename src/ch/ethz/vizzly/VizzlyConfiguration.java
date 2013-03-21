@@ -41,8 +41,6 @@ import javax.xml.parsers.ParserConfigurationException;
  *
  */
 public class VizzlyConfiguration {
-
-    public static final String SERVLET_ATTRIB_KEY = "vizzlyConfig";
     
     /**
      * Log.
@@ -94,6 +92,7 @@ public class VizzlyConfiguration {
     
     private VizzlyConfiguration() {
         cacheList = new Vector<CacheSpec>();
+        databaseJdbcUrl = "";
     }
 
     public Boolean isPerformanceTrackerEnabled() {
@@ -166,8 +165,8 @@ public class VizzlyConfiguration {
             if((cachesElement = caches.item(0)) != null) {
                 NodeList cacheNodeList = cachesElement.getChildNodes();
                 for(int i=0; i<cacheNodeList.getLength(); i++) {
-                    CacheSpec c = new CacheSpec();
                     if(cacheNodeList.item(i) instanceof Element) {
+                        CacheSpec c = new CacheSpec();
                         Element cacheElement = ((Element)cacheNodeList.item(i));
                         if(cacheElement.getTagName().equals(VizzlyConfiguration.TAG_NAME_MEM_CACHE)) {
                             c.type = CacheSpec.CACHE_TYPE_MEM;
@@ -178,11 +177,10 @@ public class VizzlyConfiguration {
                             throw new VizzlyException("Unknown cache type in configuration file.");
                         }
                         c.windowLength = Integer.parseInt(cacheElement.getAttribute(VizzlyConfiguration.ATTR_NAME_CACHE_WINDOW_LENGTH));
+                        config.cacheList.add(c);
                     }
-                    config.cacheList.add(c);
                 }
             }
-
             return config;
 
         } catch(IOException e) {
