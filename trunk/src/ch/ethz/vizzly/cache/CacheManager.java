@@ -86,7 +86,6 @@ public class CacheManager {
   
     public Vector<TimedLocationValue> getSignalData(VizzlySignal signal, int windowLengthSec, 
             Long timeFilterStart, Long timeFilterEnd, Boolean ignoreLocation) throws VizzlyException {
-        // Try memory first, then MySQL DB. Down-sample data on-the-fly, if needed.
         Vector<TimedLocationValue> r = null;
         
         // Iterate through list of available caches. Assumes that faster/smaller caches are 
@@ -149,7 +148,7 @@ public class CacheManager {
     }
     
     public void updateCachedSignal(VizzlySignal signal) {
-        // Under the assumed order of cache configuration (largest cache last), first
+        // Under the assumed order of cache configurations (largest cache last), first
         // update last cache configuration and then all others
         if(updateCachedSignalFromSource(caches.lastElement().cache, signal, 
                 caches.lastElement().windowLength) && caches.size() > 1) {
