@@ -21,7 +21,6 @@ import java.util.Vector;
 
 import ch.ethz.vizzly.cache.CacheFactory;
 import ch.ethz.vizzly.cache.CacheManager;
-import ch.ethz.vizzly.cache.memory.MemCache;
 import ch.ethz.vizzly.datareader.CsvDataReader;
 import ch.ethz.vizzly.datareader.DataReaderRegistry;
 import ch.ethz.vizzly.datareader.gsn.GsnDataReader;
@@ -89,8 +88,10 @@ public class VizzlyStateContainer {
             // Initialize caches
             Vector<CacheSpec> configCaches = config.getCacheList();
           
-            // Caches are assumed to be sorted by its ascending window length
-            Collections.sort(configCaches);
+            // Caches are assumed to be sorted by its ascending cache size,
+            // which corresponds to the descending window length. The heavier
+            // one aggregates, the less space one needs.
+            Collections.sort(configCaches, Collections.reverseOrder());
           
             // Create caches as specified in configuration file
             Vector<CacheConfiguration> caches = new Vector<CacheConfiguration>();
