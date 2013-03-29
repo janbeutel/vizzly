@@ -1,6 +1,5 @@
 <html>
   <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <link rel="stylesheet" type="text/css" href="vizzly.min.css" />
     <link rel="stylesheet" type="text/css" href="extlib/jquery-ui-1.8.20.custom.css" />
     <style type="text/css">
@@ -10,74 +9,47 @@
     -->
     </style>
     <!--[if IE]><script src="extlib/excanvas.js"></script><![endif]-->
-    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
     <script type='text/javascript' src='extlib/jquery-1.7.2.min.js'></script>
     <script type='text/javascript' src='extlib/jquery-ui-1.8.20.custom.min.js'></script>
     <script type='text/javascript' src='extlib/jquery.ui.touch-punch.min.js'></script>
     <script type='text/javascript' src='extlib/dygraph-combined.js'></script>
     <script type='text/javascript' src='vizzly.min.js'></script>
     <script type='text/javascript'>
-    var g1Config = null;
-    
     function init() {
-        g1Config = {
+        var g1Config = {
             "graph": {
                 "div": "g1_div",
-                "type": "dygraph",
-                "width": 600,
-                "height": 250,
-                "showForm": false
+                "width": 800,
+                "height": 350,
+                "showForm": true
             },
             "appUrl": "vizzly?",
-            "imageUrl" : "./images/",
-            "mapCenter": new google.maps.LatLng(47.379022, 8.541001),
             "signals": [
             {
-                "displayName": "Particular matter",
-                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_minidisc_emb__mapped" },
+                "displayName": "Dummy numbers",
+                "dataSource": { "type": "csv", "name": "dummynumbers.csv" },
                 "dataField": "number",
                 "deviceSelect": { "type": "all" },
-                "timeField": "generation_time",
+                "timeField": "time",
                 "scaling": 1.0,
-                "visible": true,
-                "locationLatField": "latitude",
-                "locationLngField": "longitude",
-                "thresholds": [ 18.0, 8.0 ]
-            },
-            {
-                "displayName": "Ozone [ppb]",
-                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
-                "dataField": "ozone_ppb",
-                "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
-                "timeField": "generation_time",
-                "scaling": 1.0,
-                "visible": true,
-                "locationLatField": "latitude",
-                "locationLngField": "longitude",
-                "thresholds": [ 18.0, 8.0 ]
-            },
-            {
-                "displayName": "CO [ppm]",
-                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_alphasense_co_gps" },
-                "dataField": "sensor_ppm",
-                "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
-                "timeField": "generation_time",
-                "scaling": 1.0,
-                "visible": true,
-                "locationLatField": "latitude",
-                "locationLngField": "longitude",
-                "thresholds": [ 18.0, 8.0 ]
+                "visible": true
             }
-            ]
+        ]
         };
-        var aggMap = new AggregationMap(g1Config, document.getElementById("map_canvas"));
-   
-    }
+        var g1 = new LinePlotWidget(g1Config);
+        }
     </script>
-    <title>Map Test</title>
+    <title>Vizzly &mdash; CSV Reader Line Plot Widget Example</title>
   </head>
 
   <body onLoad="init();">
-    <div id="map_canvas" style="width:100%; height:100%"></div>
+    <h1>Welcome to Vizzly!</h1>
+    <p>The data shown here is simply loaded from the provided <span style="font-style:italic;">dummynumbers.csv</span> file. The cache has been populated just
+    right now, you will see the actual data after reloading.</p>
+    <div id='g1_div'></div>
+    <p>&nbsp;</p>
+    <br/>
+    <p><a href="cachestatus.jsp" target="_blank">Cache status</a></p>
+    <p>&nbsp;</p>
   </body>
 </html>

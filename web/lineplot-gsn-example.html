@@ -19,7 +19,6 @@
         var g1Config = {
             "graph": {
                 "div": "g1_div",
-                "type": "dygraph",
                 "width": 800,
                 "height": 350,
                 "showForm": true
@@ -46,14 +45,14 @@
             }
         ]
         };
-        var g1 = new FrontendCreator(g1Config);
+        var g1 = new LinePlotWidget(g1Config);
         }
     </script>
-    <title>Visualization Test</title>
+    <title>Vizzly &mdash; GSN Reader Line Plot Widget Example</title>
   </head>
 
   <body onLoad="init();">
-    <h1>Test Graphs</h1>
+    <h1>GSN Line Plot Example</h1>
     <div id='g1_div'></div>
     <p>&nbsp;</p>
     <br/>

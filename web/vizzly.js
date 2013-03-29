@@ -164,7 +164,7 @@ if(typeof google == 'object') {
         this.show();
     }
 
-    function AggregationMap(config, canvas) {
+    function MapWidget(config, canvas) {
         this.map = null;
         this.config = null;
         this.canvas = null;
@@ -1126,7 +1126,7 @@ function VizzlyDygraph() {
     };
 }
 
-function FrontendCreator(config) {
+function LinePlotWidget(config) {
     this.graph = null;
     this.statusDiv = null;
     this.config = null;
