@@ -15,6 +15,7 @@ We use Ant for building Vizzly. While there is also a target that creates a gene
 
 = Default URLs & Examples =
 
-  * http://localhost:8080/ - An example of the Vizzly map widget
-  * http://localhost:8080/plottest.html - An example of the Vizzly time series widget
+  * http://localhost:8080/ - First example of a line plot widget, data is loaded from a CSV file
+  * http://localhost:8080/lineplot-gsn-example.html - Another line plot example, but this time data is loaded from a GSN server
+  * http://localhost:8080/map-gsn-example.html - An example of the Vizzly map widget
   * http://localhost:8080/cachestatus.jsp - Cache status page
