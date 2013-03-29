@@ -13,8 +13,9 @@ g1Config = {
     "graph": {
         // ID of the <div> element into which the graph is embedded
         "div": "g1_div",
-        // Width and height of the graph in pixels
+        // Width of the graph in pixels
         "width": 600,
+        // Height of the graph in pixels
         "height": 250,
         // Enable/disable signal selection form in time series plot
         "showForm": false
@@ -32,5 +33,50 @@ g1Config = {
 
 == Specification of a Vizzly Signal ==
 
+A graph config (see previous section) requires one or more signals to be specified.
 
-== !JavaScript Library Functions ==
+{{{
+{
+    // Name of the signal, this name is used in generated drop-down menus etc.
+    "displayName": "Particular matter",
+    // Data source config
+    // - type: "gsn" or "csv", more readers can be registered when extending Vizzly
+    // - serverAddress: Only relevant when type is "gsn" - Address of GSN server
+    // - name: If type is "gsn", name of the virtual sensor. If type is "csv", name of the CSV file to read from.
+    "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_minidisc_emb__mapped" },
+    // Name of the data field/column that holds the actual measurements
+    "dataField": "number",
+    // Selection of a subset of the input file by adding a selector
+    // - type: "all" or "single"
+    // - field: Only relevant when type is "single" - Name of the data field/column used for selecting a subset
+    // - value: Only relevant when type is "single" - Only entries whose "field" has the value "value" are displayed
+    "deviceSelect": { "type": "all" },
+    // Name of the data field/column that holds time information
+    "timeField": "generation_time",
+    // Only relevant for line plots - Measurement values are multiplied with this value
+    "scaling": 1.0,
+    // Only relevant for line plots - decide if this signal is visible from the start
+    "visible": true,
+    // Only relevant for map plots - name of the data field/column that holds latitude information
+    "locationLatField": "latitude",
+    // Only relevant for map plots - name of the data field/column that holds longitude information
+    "locationLngField": "longitude",
+    // Only relevant for map plots - thresholds used for painting markers green, yellow or red
+    "thresholds": [ 18.0, 8.0 ]
+}
+}}}
+
+
+== !JavaScript Library Objects ==
+
+Creation of a line plot widget:
+
+{{{
+var g1 = new LinePlotWidget(g1Config);
+}}}
+
+Creation of a map plot widget:
+
+{{{
+var aggMap = new MapWidget(g1Config, document.getElementById("map_canvas"));
+}}}
