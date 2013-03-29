@@ -3,7 +3,8 @@
     <!-- Paths for build outputs -->
     <property name="build" location="./build"/>
     <property name="dist" location="./dist"/>
-	<property name="deploy.jetty" location="./jetty-runtime/webapps/root"/>
+	<property name="deploy.jetty" location="./jetty-runtime"/>
+    <property name="deploy.jetty.webapp" location="./jetty-runtime/webapp"/>
     <!-- Paths for sources -->
     <property name="src" location="./src"/>
     <property name="lib" location="./lib"/>
@@ -53,17 +54,20 @@
 		</war>
 	</target>
 	<target name="jetty-deploy" depends="compile,minify">
-		<copy toDir="${deploy.jetty}">
+		<copy toDir="${deploy.jetty.webapp}">
 			<fileset dir="${web}">
 				<exclude name="WEB-INF/vizzly.xml*"/>
 			</fileset>
 		</copy>
-		<copy file="${web}/WEB-INF/vizzly.xml.example" tofile="${deploy.jetty}/WEB-INF/vizzly.xml" overwrite="false" />
-		<copy file="jetty-runtime/vizzly/jetty-filters.xml" tofile="${deploy.jetty}/WEB-INF/web.xml" />
-		<copy toDir="${deploy.jetty}/WEB-INF/classes">
+		<!-- Create config files at first deployments -->
+		<copy file="${deploy.jetty}/start_vizzly.sh.example" tofile="${deploy.jetty}/start_vizzly.sh" overwrite="false" />
+		<copy file="${deploy.jetty}/resources/log4j.properties.example" tofile="${deploy.jetty}/resources/log4j.properties" overwrite="false" />
+		<copy file="${deploy.jetty}/vizzly/jetty-filters.xml" tofile="${deploy.jetty.webapp}/WEB-INF/web.xml" />
+		<copy file="${web}/WEB-INF/vizzly.xml.example" tofile="${deploy.jetty.webapp}/WEB-INF/vizzly.xml" overwrite="false" />
+		<copy toDir="${deploy.jetty.webapp}/WEB-INF/classes">
 			<fileset dir="${build}" />
 		</copy>
-		<copy toDir="${deploy.jetty}/WEB-INF/lib">
+		<copy toDir="${deploy.jetty.webapp}/WEB-INF/lib">
 			<fileset dir="${lib}" />
 		</copy>
 	</target>

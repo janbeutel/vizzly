@@ -150,7 +150,7 @@ public class CsvOutputGenerator {
                     valuesAreAggregated.add(null);
                 }
             } else {
-                // Get data directly from original datasource
+                // Get data directly from original data source
                 AbstractDataReader dr = readerRegistry.getDataReader(s.dataSource.type);
                 // Set 100.000 as row limit for safety reasons, should be much less values
                 long dataFetchStart = System.currentTimeMillis();
