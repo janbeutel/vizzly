@@ -78,5 +78,5 @@ var g1 = new LinePlotWidget(g1Config);
 Creation of a map plot widget:
 
 {{{
-var aggMap = new MapWidget(g1Config, document.getElementById("map_canvas"));
+var aggMap = new MapWidget(g1Config);
 }}}
