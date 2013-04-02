@@ -164,10 +164,9 @@ if(typeof google == 'object') {
         this.show();
     }
 
-    function MapWidget(config, canvas) {
+    function MapWidget(config) {
         this.map = null;
         this.config = null;
-        this.canvas = null;
         this.markersArray = [];
         this.selectRangeStart = null;
         this.selectRangeEnd = null;
@@ -193,7 +192,7 @@ if(typeof google == 'object') {
                 streetViewControl: false,
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             };
-            this.map = new google.maps.Map(this.canvas,
+            this.map = new google.maps.Map(document.getElementById(this.config.graph.div),
                 mapOptions);
             
             var transitLayer = new google.maps.TransitLayer();
@@ -386,7 +385,6 @@ if(typeof google == 'object') {
             return visibleSignals;
         };
         this.config = config;
-        this.canvas = canvas;
         this.initMap();
     }
 }

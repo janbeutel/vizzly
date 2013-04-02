@@ -16,6 +16,9 @@
 
 package ch.ethz.vizzly;
 
+import java.util.Calendar;
+import java.util.TimeZone;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -50,7 +53,10 @@ public class VizzlyServletContextListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         // Enable DNS caching, very useful when GSN data sources are used
         java.security.Security.setProperty("networkaddress.cache.ttl", "14400");
-
+        
+        // Set the default time zone to UTC
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        
         Boolean initError = false;
         try{
             
