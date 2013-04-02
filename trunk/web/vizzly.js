@@ -956,6 +956,9 @@ function VizzlyDygraph() {
     };
     this.zoomCallback = function(minDate, maxDate, yRanges) {
         if (minDate != this.xaxisrange[0] || maxDate!=this.xaxisrange[1]) {
+          // All timestamps coming from Vizzly are in UTC
+          minDate = minDate-d.getTimezoneOffset()*60*1000;
+          maxDate = maxDate-d.getTimezoneOffset()*60*1000;
           this.timeslider.setRange(minDate, maxDate);
           this.selectRangeStart = new Date(minDate);
           this.selectRangeEnd = new Date(maxDate);
@@ -993,6 +996,8 @@ function VizzlyDygraph() {
         return queryStr;
     };
     this.xAxisFormatter = function(date, gran) {
+        // All timestamps coming from Vizzly are in UTC
+        date.setTime(date.getTime()-date.getTimezoneOffset()*60*1000);
         if (gran >= Dygraph.DECADAL) {
           return date.strftime('%Y');
         } else if (gran >= Dygraph.MONTHLY) {
