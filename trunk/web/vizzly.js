@@ -957,6 +957,7 @@ function VizzlyDygraph() {
     this.zoomCallback = function(minDate, maxDate, yRanges) {
         if (minDate != this.xaxisrange[0] || maxDate!=this.xaxisrange[1]) {
           // All timestamps coming from Vizzly are in UTC
+          var d = new Date();
           minDate = minDate-d.getTimezoneOffset()*60*1000;
           maxDate = maxDate-d.getTimezoneOffset()*60*1000;
           this.timeslider.setRange(minDate, maxDate);
