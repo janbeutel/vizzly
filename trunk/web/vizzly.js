@@ -585,6 +585,9 @@ function SignalSelect(initobject) {
     $(this.xValueDiv).text('Selected time: -');
     this.signalSelectDiv.appendChild(this.xValueDiv);
     this.shownSignals = null;
+    this.timezoneOffsetMsec = null;
+    var timezoneDate = new Date();
+    this.timezoneOffsetMsec = timezoneDate.getTimezoneOffset()*60*1000;
     
     if(typeof this.config.selectedSignalIdx != 'undefined') {
         var visibleCnt = 0;
@@ -683,7 +686,7 @@ function SignalSelect(initobject) {
     this.highlightCallback = function(caller, event, x, points, row) {
         $(this.topdiv).show();
         var j = 0;
-        var d = new Date(x);
+        var d = new Date(x-this.timezoneOffsetMsec);
         $(this.xValueDiv).text('Selected time: '+d.formatTime());
         var labels = caller.graph.attr_('labels');
         for (i=0; i < this.shownSignals.length; i++) {
@@ -773,8 +776,11 @@ function VizzlyDygraph() {
     this.selectedSignalIdx = null;
     this.forceLoadUnaggregated = false;
     this.yaxisrange=[];
+    this.timezoneOffsetMsec = null;
     this.init = function(config, element, mousediv) {
          this.config = config;
+         var timezoneDate = new Date();
+         this.timezoneOffsetMsec = timezoneDate.getTimezoneOffset()*60*1000;
          
          this.element = document.createElement('div');
 
@@ -957,9 +963,8 @@ function VizzlyDygraph() {
     this.zoomCallback = function(minDate, maxDate, yRanges) {
         if (minDate != this.xaxisrange[0] || maxDate!=this.xaxisrange[1]) {
           // All timestamps coming from Vizzly are in UTC
-          var d = new Date();
-          minDate = minDate-d.getTimezoneOffset()*60*1000;
-          maxDate = maxDate-d.getTimezoneOffset()*60*1000;
+          minDate = minDate-this.timezoneOffsetMsec;
+          maxDate = maxDate-this.timezoneOffsetMsec;
           this.timeslider.setRange(minDate, maxDate);
           this.selectRangeStart = new Date(minDate);
           this.selectRangeEnd = new Date(maxDate);
@@ -998,7 +1003,7 @@ function VizzlyDygraph() {
     };
     this.xAxisFormatter = function(date, gran) {
         // All timestamps coming from Vizzly are in UTC
-        date.setTime(date.getTime()-date.getTimezoneOffset()*60*1000);
+        date.setTime(date.getTime()-this.timezoneOffsetMsec);
         if (gran >= Dygraph.DECADAL) {
           return date.strftime('%Y');
         } else if (gran >= Dygraph.MONTHLY) {
