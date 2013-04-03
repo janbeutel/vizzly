@@ -19,7 +19,7 @@ This file will automatically be copied into _./jetty-deploy/webapp/WEB-INF/vizzl
 	
 	<!-- 
 	       In principle you can define as many caches as you want. In reality something will break right now if there is more than one
-	       SQL DB cache configured. This is going to fixed in one of the next versions.
+	       SQL DB cache configured. This is going to be fixed in one of the next versions.
 	
 	       Ideally, the window lengths of different caches should be multiples of the smallest window length used. The configuration we use
 	       is to have a SQL cache with 240sec window length and a memory cache with 960sec window length. The larger the window length over which
