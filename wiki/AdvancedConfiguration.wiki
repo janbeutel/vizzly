@@ -1,5 +1,7 @@
 #summary Configuration of database connection etc.
 
+= Vizzly Configuration File =
+
 A template for the configuration file that Vizzly uses is provided in _web/WEB-INF/vizzly.xml.example_
 
 This file will automatically be copied into _./jetty-deploy/webapp/WEB-INF/vizzly.xml_ when running `ant jetty-deploy` for the first time. Changes are ideally done by directly editing  _./jetty-deploy/webapp/WEB-INF/vizzly.xml_. Vizzly needs to be reloaded for changes to take effect.
@@ -17,7 +19,7 @@ This file will automatically be copied into _./jetty-deploy/webapp/WEB-INF/vizzl
 	
 	<!-- 
 	       In principle you can define as many caches as you want. In reality something will break right now if there is more than one
-	       SQL DB cache configured. 
+	       SQL DB cache configured. This is going to fixed in one of the next versions.
 	
 	       Ideally, the window lengths of different caches should be multiples of the smallest window length used. The configuration we use
 	       is to have a SQL cache with 240sec window length and a memory cache with 960sec window length. The larger the window length over which
@@ -33,3 +35,9 @@ This file will automatically be copied into _./jetty-deploy/webapp/WEB-INF/vizzl
 	</caches>
 </vizzlyConfig>
 }}}
+
+= Other Issues =
+
+== How can I change the TCP port on which Vizzly listens? ==
+
+The TCP port (default: 8080) on which the Jetty server that runs Vizzly listens on can be changed by editing _./jetty-deploy/etc/jetty.xml_.
