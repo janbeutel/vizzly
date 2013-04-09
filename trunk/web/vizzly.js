@@ -941,6 +941,7 @@ function VizzlyDygraph() {
             if (this.yaxisrange.length>0) {
               options.valueRange = this.yaxisrange;
             }
+            if (this.graph) { this.graph.destroy(); }
             this.graph = new Dygraph(this.element, data, options);
         } else {
           var options = { 'file': data };
