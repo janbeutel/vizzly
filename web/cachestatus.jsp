@@ -2,6 +2,7 @@
     java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
 <html><head>
 <title>Vizzly Cache Status</title>
+<script type='text/javascript' src='extlib/jquery-1.7.2.min.js'></script>
 <style type="text/css">
 h3 { font-family: Verdana, Helvetica, sans-serif; font-size:14px; }
 body, p, td { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
@@ -88,13 +89,18 @@ for(int i = 0; i < workerSignals.length; i++) {
 
 
 <%
-// Process signal removal requests
-if(request.getParameter("remove") != null) {
-    for(VizzlySignal s : cacheManager.getSignals(cacheManager.getNumberOfCaches()-1)) {
-        if(s.getUniqueIdentifier().equals(request.getParameter("remove"))) {
-            cacheManager.scheduleSignalForRemoval(s);
-        }   
+if ("POST".equalsIgnoreCase(request.getMethod())) {
+    // Process signal removal requests
+    Map<String, String[]> parameters = request.getParameterMap();
+    for(String parameter : parameters.keySet()) {
+        // Quite inefficient right now, but should not be used so often anyways
+        for(VizzlySignal s : cacheManager.getSignals(cacheManager.getNumberOfCaches()-1)) {
+            if(s.getUniqueIdentifier().equals(parameter)) {
+                cacheManager.scheduleSignalForRemoval(s);
+            }   
+        }
     }
+    response.sendRedirect(request.getRequestURI());
 }
 
 if(cacheManager.getSignalsToRemove().size() > 0) {
@@ -138,8 +144,10 @@ SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 %>
 <h3><%=cacheManager.getCacheDescription(i)%> Cache Contents</h3>
+<form method="POST">
 <table style="border: 1px solid #000000;">
 <tr style="background-color: #000000; color: #ffffff; font-weight: bold">
+    <td>DEL</td>
     <td><a class="white" href="?s=NAME">SIGNAL NAME</a></td>
     <td><a class="white" href="?s=WINDOW_LENGTH">WIN LEN.</a></td>
     <td><a class="white" href="?s=NUM_ELEMENTS"># ROWS</a></td>
@@ -147,21 +155,26 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
     <td width="160"><a class="white" href="?s=LAST_PACKET_TIMESTAMP">LAST TIMESTAMP</a></td>
     <td width="160"><a class="white" href="?s=LAST_UPDATE">LAST UPDATE</a></td>
     <td><a class="white" href="?s=HITS">HITS</a></td>
-    <td>DEL</td>
 </tr>
 <%
     Vector<CachedDataInfo> cacheInfo = cacheManager.getCachedDataInfo(i);
     long totalElements = 0;
+    int signalIdx = 0;
     Collections.sort(cacheInfo, comp);
 
     for (CachedDataInfo d : cacheInfo) {
         totalElements += (d.hasLocationData) ? d.numElements*24 : d.numElements*8;
-        String removeLink = "?remove=" + d.signal.getUniqueIdentifier();
-        if(request.getParameter("s") != null) {
-            removeLink += "&s=" + request.getParameter("s");
-        }           
+        signalIdx++;
+            
 %>
-<tr>
+<tr class="signalrow" id="row_<%=i%>_<%=signalIdx%>">
+<%
+    if(!cacheManager.getSignalsToRemove().contains(d.signal)) {
+%>
+    <td><input type="checkbox" id="check_<%=i%>_<%=signalIdx%>" name="<%=d.signal.getUniqueIdentifier()%>" /></td>
+<% } else { %>
+    <td><img src="./images/drop-locked.png" width="16" height="16" alt="Removal pending" title="Removal pending" /></td>
+<% } %>
     <td><%=d.signal.getUniqueIdentifier()%></td>
     <td align="right"><%=d.windowLength%></td>
     <td align="right"><%=d.numElements%></td>
@@ -169,13 +182,6 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
     <td align="right"><%=((d.lastPacketTimestamp != null) ? dateFormatter.format(d.lastPacketTimestamp) : "")%></td>
     <td align="right"><%=((d.lastUpdate != null) ? dateFormatter.format(d.lastUpdate) : "")%></td>
     <td align="right"><%=d.hits%></td>
-<%
-    if(!cacheManager.getSignalsToRemove().contains(d.signal)) {
-%>
-    <td align="right"><a href="<%=removeLink%>" title="Remove signal (all resolutions)"><img src="./images/drop.png" width="16" height="16" alt="Remove signal (all resolutions)" /></a></td>
-<% } else { %>
-    <td align="right"><img src="./images/drop-locked.png" width="16" height="16" alt="Removal pending" title="Removal pending" /></td>
-<% } %>
 </tr>
 <%  } 
     double cacheSizeMb = (double)totalElements/1024/1024;
@@ -185,12 +191,29 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
         <td colspan="8">Number of entries: <%=cacheInfo.size()%> / Size of cached data: <%=df.format(cacheSizeMb)%> MByte</td>
     </tr>
 </table>
+<input type="submit" value="Submit">
+</form>
 <p>&nbsp;</p>
 <% } %>
 <hr />
 <div id="footer">
-&copy; 2012 Computer Engineering and Networks Laboratory, ETH Zurich<br/>
+&copy; 2013 Computer Engineering and Networks Laboratory, ETH Zurich<br/>
 Vizzly is free open-source software: <a href="https://code.google.com/p/vizzly">https://code.google.com/p/vizzly</a><br/>
-</div>   
+</div>
+<script type='text/javascript'>
+$("tr.signalrow").mouseover(function() {
+    $(this).css('background-color', '#77FF99');
+}).mouseout(function() {
+    var rowName = 'check_' + $(this).attr('id').substr(4, $(this).attr('id').len);
+    if(!$("#" + rowName).prop('checked')) {
+          $(this).css('background-color', 'transparent');
+    }
+}).click(function(e) {
+    var rowName = 'check_' + $(this).attr('id').substr(4, $(this).attr('id').len);
+    // The following line checks if the checkbox itself or the table row has been clicked
+    if($(e.target).closest('input[type="checkbox"]').length == 0) {
+        $("#" + rowName).prop('checked', !$("#" + rowName).prop('checked'));
+}});
+</script>
 </body>
 </html>
