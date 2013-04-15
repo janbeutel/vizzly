@@ -543,12 +543,21 @@ public class SqlDbCache extends AbstractCache {
             // Delete meta data in memory first, data in database afterwards
             HashMap<Integer, Integer> lookupMap = null;
             int signalId = 0;
+            
             synchronized(seenSignals) {
                 seenSignals.remove(signal);
             }
-            signalId = seenSignalsEntryIds.get(signal);
-            seenSignalsEntryIds.remove(signal);
-
+            
+            synchronized(seenSignalsEntryIds) {
+               if(seenSignalsEntryIds.contains(signal)) {
+                   signalId = seenSignalsEntryIds.get(signal);
+                   seenSignalsEntryIds.remove(signal);
+               } else {
+                   // Signal has already been removed
+                   return true;
+               }
+            }
+            
             lookupMap = cacheIdLookup.get(signal);
             if(lookupMap != null) {
                 for(Integer i : lookupMap.values()) {
