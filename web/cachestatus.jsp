@@ -1,16 +1,26 @@
 <%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,
     java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
-<html><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <title>Vizzly Cache Status</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <script type='text/javascript' src='extlib/jquery-1.7.2.min.js'></script>
 <style type="text/css">
+body { background-color: #FFFFFF; }
 h3 { font-family: Verdana, Helvetica, sans-serif; font-size:14px; }
 body, p, td { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
 a.white { color:#ffffff; }
 #footer, td.it { font-style: italic; }
+td.w250 { width: 250; }
+td.w30 { width: 30; }
+td.w300 { width: 300; }
+td.w160 { width: 160; }
+td.center { text-align: center; }
+td.right { text-align: right; }
 </style>
 </head>
-<body bgcolor="#FFFFFF">
+<body>
 <%
 VizzlyStateContainer vizzlyState = 
     (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
@@ -33,9 +43,8 @@ uptimeText.append(uptime / SECOND).append(" seconds ");
 
 %>
 <h3>Cache Status</h3>
-<p>
 <table style="border: 0px;">
-<tr><td width="250">Uptime:</td><td><%=uptimeText.toString()%></tr>
+<tr><td class="w250">Uptime:</td><td><%=uptimeText.toString()%></tr>
 <%
 for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
     double cacheSizeMb = (double)cacheManager.getCacheSize(i)/1024/1024;
@@ -51,18 +60,16 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 }
 %>
 </table>
-</p>
 <h3>Update Worker Status</h3>
 <%
 CacheUpdateWorkerSynchronization workerSync = (CacheUpdateWorkerSynchronization)application
     .getAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY);
 VizzlySignal[] workerSignals = workerSync.getWorkerSignals();
 %>
-<p>
 <table style="border: 1px solid #000000;">
     <tr style="background-color: #000000; color: #ffffff; font-weight: bold">
-        <td width="30">#</td>
-        <td width="300">PROCESSED SIGNAL</td>
+        <td class="w30">#</td>
+        <td class="w300">PROCESSED SIGNAL</td>
     </tr>
 <%
 for(int i = 0; i < workerSignals.length; i++) {
@@ -85,8 +92,6 @@ for(int i = 0; i < workerSignals.length; i++) {
 }
 %>    
 </table>
-</p>
-
 
 <%
 if ("POST".equalsIgnoreCase(request.getMethod())) {
@@ -152,8 +157,8 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
     <td><a class="white" href="?s=WINDOW_LENGTH">WIN LEN.</a></td>
     <td><a class="white" href="?s=NUM_ELEMENTS"># ROWS</a></td>
     <td><a class="white" href="?s=HAS_LOCATION_DATA">LOC</a></td>
-    <td width="160"><a class="white" href="?s=LAST_PACKET_TIMESTAMP">LAST TIMESTAMP</a></td>
-    <td width="160"><a class="white" href="?s=LAST_UPDATE">LAST UPDATE</a></td>
+    <td class="w160"><a class="white" href="?s=LAST_PACKET_TIMESTAMP">LAST TIMESTAMP</a></td>
+    <td class="w160"><a class="white" href="?s=LAST_UPDATE">LAST UPDATE</a></td>
     <td><a class="white" href="?s=HITS">HITS</a></td>
 </tr>
 <%
@@ -176,12 +181,12 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
     <td><img src="./images/drop-locked.png" width="16" height="16" alt="Removal pending" title="Removal pending" /></td>
 <% } %>
     <td><%=d.signal.getUniqueIdentifier()%></td>
-    <td align="right"><%=d.windowLength%></td>
-    <td align="right"><%=d.numElements%></td>
-    <td align="center"><%=((d.hasLocationData) ? "Y" : "N")%></td>
-    <td align="right"><%=((d.lastPacketTimestamp != null) ? dateFormatter.format(d.lastPacketTimestamp) : "")%></td>
-    <td align="right"><%=((d.lastUpdate != null) ? dateFormatter.format(d.lastUpdate) : "")%></td>
-    <td align="right"><%=d.hits%></td>
+    <td class="right"><%=d.windowLength%></td>
+    <td class="right"><%=d.numElements%></td>
+    <td class="center"><%=((d.hasLocationData) ? "Y" : "N")%></td>
+    <td class="right"><%=((d.lastPacketTimestamp != null) ? dateFormatter.format(d.lastPacketTimestamp) : "")%></td>
+    <td class="right"><%=((d.lastUpdate != null) ? dateFormatter.format(d.lastUpdate) : "")%></td>
+    <td class="right"><%=d.hits%></td>
 </tr>
 <%  } 
     double cacheSizeMb = (double)totalElements/1024/1024;
