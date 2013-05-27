@@ -313,6 +313,7 @@ public class AggregationLevelLookup {
                 p = null;
                 conn.close();
                 conn = null;
+                dbIdLookupTable.remove(signal);
             } catch(SQLException e) {
                 log.error(e);
             }

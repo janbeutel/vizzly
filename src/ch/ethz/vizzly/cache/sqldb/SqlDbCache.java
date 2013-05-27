@@ -241,8 +241,8 @@ public class SqlDbCache extends AbstractCache {
                 // Create not yet existing table
                 tableName = tablePrefix + Integer.valueOf(nextEntryId).toString();
                 String sql = "CREATE TABLE " + tableName + " (" +
-                        "`id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-                        "`timeIdx` MEDIUMINT UNSIGNED NOT NULL," +
+                        "`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+                        "`timeIdx` INT UNSIGNED NOT NULL," +
                         "`value` double NOT NULL," +
                         locationColumns +
                         "KEY `timeIdx` (`timeIdx`)" +
