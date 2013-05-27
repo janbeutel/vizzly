@@ -44,8 +44,23 @@ public class SamplingRateEstimation implements Serializable {
     
     private static Logger log = Logger.getLogger(SamplingRateEstimation.class);
     
-    // Minimum number of samples required for including a monthly value in an estimation. Used to filter weird outliers values
+    /**
+     * This variable is used for determining if it is worthwhile to update
+     * the corresponding database entry.
+     */
+    private long lastSignificantUpdateTimestamp = 0L;
+    
+    /**
+     * Minimum number of samples required for including a monthly value in an estimation. 
+     * Used to filter weird outlier values
+     */
     private final int MIN_NUM_SAMPLES = 100;
+    
+    /**
+     * Minimal relative change caused by adding a new sample so that
+     * data is marked as dirty.
+     */
+    private final double MIN_REL_CHANGE_DIRTY = 0.05;
     
     public SamplingRateEstimation(long firstTimestamp) {
         monthlyEstimates = new ValueAggregate[12];
@@ -109,6 +124,7 @@ public class SamplingRateEstimation implements Serializable {
     }
     
     private void updateEstimate(int monthIdx, double timeDiff) throws VizzlyException {
+        double oldValue = 0.0;
         if(monthIdx < 0) {
             throw new VizzlyException("monthIdx must be >= 0");
         }
@@ -124,8 +140,22 @@ public class SamplingRateEstimation implements Serializable {
         // Create aggregation object, if needed
         if(monthlyEstimates[monthIdx] == null) {
             monthlyEstimates[monthIdx] = new ValueAggregate();
+            // Database entry should be updated after adding an entry
+            lastSignificantUpdateTimestamp = System.currentTimeMillis();
         }
+        
+        if(monthlyEstimates[monthIdx].getNumSamples() > 0) {
+            oldValue = monthlyEstimates[monthIdx].getAggregatedValue();
+        }
+        
         monthlyEstimates[monthIdx].addValue(timeDiff);
+        
+        // Check if the added value made the current estimation change significantly
+        // If yes, set the data as dirty
+        if(monthlyEstimates[monthIdx].getNumSamples() > 1 &&
+                Math.abs((monthlyEstimates[monthIdx].getAggregatedValue()/oldValue)-1) >= MIN_REL_CHANGE_DIRTY) {
+            lastSignificantUpdateTimestamp = System.currentTimeMillis();
+        }
     }
 
     public void updateEstimation(Vector<TimedLocationValue> data) {
@@ -167,4 +197,8 @@ public class SamplingRateEstimation implements Serializable {
         return ret;
     }
 
+    public long getLastSignificantUpdateTimestamp() {
+        return lastSignificantUpdateTimestamp;
+    }
+    
 }
