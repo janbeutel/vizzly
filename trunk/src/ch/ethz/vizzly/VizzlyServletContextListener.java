@@ -114,6 +114,8 @@ public class VizzlyServletContextListener implements ServletContextListener {
             CacheUpdateWorkerSynchronization workerSync = (CacheUpdateWorkerSynchronization)sce
                     .getServletContext().getAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY);
             workerSync.terminateThreads();
+            // Flush unsaved rate estimation data
+            AggregationLevelLookup.getInstance().flushEstimationData();
         } catch (Exception ex) {
         }
     }
