@@ -77,6 +77,9 @@ public class VizzlyServletContextListener implements ServletContextListener {
                 ctx.bind("VizzlyDS", ds);
             }
      
+            // Initialize aggregation level lookup - happens before caches are created
+            AggregationLevelLookup.getInstance().init(vizzlyConfig.useSqlDatabase());
+            
             // Initialize state object
             VizzlyStateContainer vizzlyState = new VizzlyStateContainer(vizzlyConfig);
             sce.getServletContext().setAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY, vizzlyState);
@@ -85,7 +88,7 @@ public class VizzlyServletContextListener implements ServletContextListener {
             CacheUpdateWorkerSynchronization workerSync = new CacheUpdateWorkerSynchronization(vizzlyState);
             sce.getServletContext().setAttribute(CacheUpdateWorkerSynchronization.SERVLET_ATTRIB_KEY, workerSync);
             workerSync.startUpdaterThreads(vizzlyConfig.getNumWorkerThreads());
-
+           
             log.info("Vizzly started successfully.");
 
         } catch(VizzlyException e) {

@@ -119,15 +119,15 @@ public class SqlDbCache extends AbstractCache {
         try {
 
             InitialContext ctx = new InitialContext();
-            // Perform JNDI lookup - database connection is configured in contexts/sensorviz.xml
+            // Perform JNDI lookup
             ds = (DataSource)ctx.lookup("VizzlyDS");
 
             // Create tables for managing structure
+            log.info("Create database table (if not existing): " + signalsDbTable);
             sqlExecuteSimpleQuery(signalsDbTableCreate);
-            log.info("Created new database table: " + signalsDbTable);
+            log.info("Create database table (if not existing): " + cacheMetaDataTable);
             sqlExecuteSimpleQuery(cacheMetaDataTableCreate);
-            log.info("Created new database table: " + cacheMetaDataTable);
-
+            
             // Load previous state from DB
             initShadowedDataFromDb();
 

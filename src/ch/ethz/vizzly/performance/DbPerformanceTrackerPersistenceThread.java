@@ -77,7 +77,7 @@ public class DbPerformanceTrackerPersistenceThread extends Thread {
         this.tracker = tracker;
         try {
             InitialContext ctx = new InitialContext();
-            // Perform JNDI lookup - database connection is configured in contexts/sensorviz.xml
+            // Perform JNDI lookup
             ds = (DataSource)ctx.lookup("VizzlyDS");
 
             // Create table, if needed

@@ -16,14 +16,20 @@
 
 package ch.ethz.vizzly;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 
@@ -39,22 +45,37 @@ import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
  * @author Matthias Keller
  *
  */
-
 public class AggregationLevelLookup {
 
     public static final int MIN_WINDOW_LENGTH_SEC = 240;
+    
+    /**
+     * Minimal wait time before again updating the database.
+     */
+    public final long MIN_DB_UPDATE_WAIT = 120000L;
 
-    private final String stateFile = "estimation.dat";
-
-    private final String stateFileTemp = "estimation.dat.tmp";
-
+    private Boolean isInitialized = false;
+    
+    private DataSource ds = null;
+    
+    private Boolean useDatabase = false;
+    
+    private long lastDatabaseUpdate = 0L;
     
     /**
      * Log.
      */
     private static Logger log = Logger.getLogger(AggregationLevelLookup.class);
 
-    private Object estimationFileLock = new Object();
+    final private String rateEstimatorTable = "viz_rate_estimation";
+
+    final private String rateEstimatorTableCreate = "CREATE TABLE IF NOT EXISTS " + rateEstimatorTable + " (" +
+            "`id` int(11) NOT NULL AUTO_INCREMENT," +
+            "`viz_signal` BLOB NOT NULL," +
+            "`rate_estimation` BLOB NOT NULL," +
+            "`last_update` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+            "PRIMARY KEY (`id`)" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 
     /**
      * Singleton
@@ -62,10 +83,25 @@ public class AggregationLevelLookup {
     private static AggregationLevelLookup instance = null;
 
     private ConcurrentHashMap<VizzlySignal,SamplingRateEstimation> rateEstimators = null;
+    
+    private ConcurrentHashMap<VizzlySignal,Integer> dbIdLookupTable = null;
 
-    private AggregationLevelLookup() {
-        rateEstimators = new ConcurrentHashMap<VizzlySignal,SamplingRateEstimation>();
-        loadStateFromFile();
+    private AggregationLevelLookup() {}
+    
+    public void init(Boolean useDatabase) {
+        synchronized(isInitialized) {
+            if(isInitialized) {
+                return;
+            }
+            rateEstimators = new ConcurrentHashMap<VizzlySignal,SamplingRateEstimation>();
+            if(useDatabase) {
+                this.useDatabase = true;
+                initDatabase();
+                dbIdLookupTable = new ConcurrentHashMap<VizzlySignal,Integer>();
+                loadFromDatabase();
+            }
+            isInitialized = true;
+        }
     }
 
     public static synchronized AggregationLevelLookup getInstance() {
@@ -134,84 +170,153 @@ public class AggregationLevelLookup {
             rateEstimators.put(signal, e);
         }
         e.updateEstimation(values);
-        writeStateToFile();
+        if(useDatabase) {
+            updateDatabase();
+        }
     }
 
     public void deleteSignalEstimation(VizzlySignal signal) {
         rateEstimators.remove(signal);
-        writeStateToFile();
+        deleteFromDatabase(signal);
     }
+    
+    public Boolean isInitialized() {
+        return isInitialized;
+    }
+    
+    private void initDatabase() {
+        try {
+            InitialContext ctx = new InitialContext();
+            // Perform JNDI lookup
+            ds = (DataSource)ctx.lookup("VizzlyDS");
 
-    private void writeStateToFile() {
-        FileOutputStream fos = null;
-        ObjectOutputStream o = null;
-        synchronized(estimationFileLock) {
-            try {
-                fos = new FileOutputStream(stateFileTemp); 
-                o = new ObjectOutputStream(fos);
-                o.writeObject(Integer.valueOf(rateEstimators.size()));
-                for(VizzlySignal s : rateEstimators.keySet()) {
-                    o.writeObject(s);
-                    o.writeObject(rateEstimators.get(s));
-                }
-                o.close();
-                o = null;
-                fos.close();
-                fos = null;
-                File f = new File(stateFileTemp);
-                f.renameTo(new File(stateFile));
-            } catch(IOException e) {
-                log.error(stateFile, e);
-            } finally { 
-                try { 
-                    if(o != null) {
-                        o.close();
-                    }
-                    if(fos != null) {
-                        fos.close();
-                    }
-                } catch (Exception e) { 
-                    log.error("Error in writeStateToFile: " + e);
-                } 
-            }
+            Connection conn = ds.getConnection();
+            Statement stmt = conn.createStatement();
+            log.info("Create database table (if not existing): " + rateEstimatorTable);
+            stmt.executeUpdate(rateEstimatorTableCreate);
+            stmt.close();
+            stmt = null;
+            conn.close();
+            conn = null;
+        } catch(NamingException e) {
+            log.error("Failed to connect to database server.", e);
+        } catch(SQLException e) {
+            log.error(e);
         }
     }
+    
+    private void loadFromDatabase() {
+        try {
+            Connection conn = ds.getConnection();
+            Statement s = conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT id, viz_signal, rate_estimation FROM " + 
+                    rateEstimatorTable);
 
-    private void loadStateFromFile() {
-        FileInputStream fis = null;
-        ObjectInputStream o = null;
-        synchronized(estimationFileLock) {
+            while(rs.next()) {
+                int id = rs.getInt("id");
+                byte[] buf = rs.getBytes("viz_signal");
+                ObjectInputStream objectIn = new ObjectInputStream(new ByteArrayInputStream(buf));
+                VizzlySignal sig = (VizzlySignal)objectIn.readObject();
+                buf = rs.getBytes("rate_estimation");
+                objectIn = new ObjectInputStream(new ByteArrayInputStream(buf));
+                SamplingRateEstimation e = (SamplingRateEstimation)objectIn.readObject();
+                rateEstimators.put(sig, e);
+                dbIdLookupTable.put(sig, id);
+            }
+            s.close();
+            s = null;
+            conn.close();
+            conn = null;
+        } catch(SQLException e) {
+            log.error(e);
+        } catch(IOException e) {
+            log.error(e);
+        } catch(ClassNotFoundException e) {
+            log.error(e);
+        }
+    }
+    
+    private void updateDatabase() {
+        synchronized(useDatabase) {
             try {
-                File f = new File(stateFile);
-                if(!f.exists()) {
+                
+                if((System.currentTimeMillis()-lastDatabaseUpdate) < MIN_DB_UPDATE_WAIT) {
                     return;
                 }
-                fis = new FileInputStream(stateFile); 
-                o = new ObjectInputStream(fis); 
-                Integer numElements = (Integer)o.readObject();
-                log.debug("Loading " + numElements + " sampling rate estimations from file");
-                for(int i = 0; i < numElements; i++) {
-                    VizzlySignal s = (VizzlySignal)o.readObject();
-                    SamplingRateEstimation e = (SamplingRateEstimation)o.readObject();
-                    rateEstimators.put(s, e);
+                Connection conn = ds.getConnection();
+                conn.setAutoCommit(false);
+
+                // Add not yet stored entries
+                PreparedStatement pInsert = conn.prepareStatement("INSERT INTO " + rateEstimatorTable + 
+                        " (viz_signal, rate_estimation) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
+                PreparedStatement pUpdate = conn.prepareStatement("UPDATE " + rateEstimatorTable + 
+                        " SET rate_estimation = ? WHERE id = ?");
+                // This vector is required to map signals to auto-generated IDs later on
+                Vector<VizzlySignal> addedEstimators = new Vector<VizzlySignal>();
+                int batchSizeIns = 0, batchSizeUpd = 0;
+                long now = System.currentTimeMillis();
+                for(VizzlySignal sig : rateEstimators.keySet()) {
+                    if(dbIdLookupTable.get(sig) == null) {
+                        pInsert.setObject(1, sig);
+                        pInsert.setObject(2, rateEstimators.get(sig));
+                        pInsert.addBatch();
+                        addedEstimators.add(sig);
+                        batchSizeIns++;
+                    } else {
+                        SamplingRateEstimation e = rateEstimators.get(sig);
+                        // Also limit the frequency in which single entries are updated
+                        if((now-e.getLastSignificantUpdateTimestamp()) < MIN_DB_UPDATE_WAIT) {
+                            continue;
+                        }
+                        pUpdate.setObject(1, e);
+                        pUpdate.setInt(2, dbIdLookupTable.get(sig));
+                        pUpdate.addBatch();
+                        batchSizeUpd++;
+                    }
                 }
-            } catch(IOException e) {
-                log.error(e);
-            } catch(ClassNotFoundException e) {
-                log.error(e);
-            } finally { 
-                try {
-                    if(o != null) {
-                        o.close();
+                if(batchSizeIns > 0) {
+                    pInsert.executeBatch();
+                    conn.commit();
+                    // Retrieve newly generated IDs
+                    ResultSet rs = pInsert.getGeneratedKeys();
+                    int i = 0;
+                    while(rs.next()) {
+                        dbIdLookupTable.put(addedEstimators.get(i), rs.getInt(1));
+                        i++;
                     }
-                    if(fis != null) {
-                        fis.close();
-                    }
-                } catch (Exception e) { 
-                    log.error("Error in loadStateFromFile: " + e);
-                } 
+                }
+                pInsert.close();
+                pInsert = null;
+                if(batchSizeUpd > 0) {
+                    pUpdate.executeBatch();
+                    conn.commit();
+                }
+                pUpdate.close();
+                pUpdate = null;
+                conn.close();
+                conn = null;
+            } catch(SQLException e) {
+                log.error(e);
             }
         }
     }
-
+    
+    private void deleteFromDatabase(VizzlySignal signal) {
+        synchronized(useDatabase) {
+            try {
+                Connection conn = ds.getConnection();
+                PreparedStatement p = conn.prepareStatement("DELETE FROM " + rateEstimatorTable + 
+                        " WHERE id = ?");
+                p.setInt(1, dbIdLookupTable.get(signal));
+                p.executeQuery();
+                p.close();
+                p = null;
+                conn.close();
+                conn = null;
+            } catch(SQLException e) {
+                log.error(e);
+            }
+        }
+    }
+    
 }
