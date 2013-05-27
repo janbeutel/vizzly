@@ -113,6 +113,9 @@ public class AggregationLevelLookup {
 
     public Boolean canLoadUnaggregatedData(VizzlySignal signal, Long timeFilterStart, 
             Long timeFilterEnd, int maxNumPoints, CacheManager cache) throws VizzlyException {
+        if(!isInitialized) {
+            throw new VizzlyException("The aggregation level lookup instance has not been initialized.");
+        }
         Boolean ret = false;
         SamplingRateEstimation estim = rateEstimators.get(signal);
         if(estim == null) {
@@ -139,6 +142,9 @@ public class AggregationLevelLookup {
 
     public int getWindowLength(VizzlySignal signal, Long timeFilterStart, 
             Long timeFilterEnd, int maxNumPoints, CacheManager cache) throws VizzlyException {
+        if(!isInitialized) {
+            throw new VizzlyException("The aggregation level lookup instance has not been initialized.");
+        }
         int multiple = 1;
         int windowLengthSec = 24*365*3600; // initialize with arbitrary chosen, high value
         Long signalStart = cache.getFirstPacketTimestamp(signal);
@@ -171,7 +177,8 @@ public class AggregationLevelLookup {
         }
         e.updateEstimation(values);
         if(useDatabase) {
-            updateDatabase();
+            // Only update rate estimations that recently changed
+            updateDatabase(false);
         }
     }
 
@@ -205,6 +212,9 @@ public class AggregationLevelLookup {
         }
     }
     
+    /**
+     * Loads data from a database. Called once during initialization.
+     */
     private void loadFromDatabase() {
         try {
             Connection conn = ds.getConnection();
@@ -236,11 +246,15 @@ public class AggregationLevelLookup {
         }
     }
     
-    private void updateDatabase() {
+    /**
+     * This function synchronized the contents in memory with the database.
+     * @param forceUpdate Write all data independent of its recentness.
+     */
+    private void updateDatabase(Boolean forceUpdate) {
         synchronized(useDatabase) {
             try {
                 
-                if((System.currentTimeMillis()-lastDatabaseUpdate) < MIN_DB_UPDATE_WAIT) {
+                if(!forceUpdate && (System.currentTimeMillis()-lastDatabaseUpdate) < MIN_DB_UPDATE_WAIT) {
                     return;
                 }
                 Connection conn = ds.getConnection();
@@ -254,7 +268,6 @@ public class AggregationLevelLookup {
                 // This vector is required to map signals to auto-generated IDs later on
                 Vector<VizzlySignal> addedEstimators = new Vector<VizzlySignal>();
                 int batchSizeIns = 0, batchSizeUpd = 0;
-                long now = System.currentTimeMillis();
                 for(VizzlySignal sig : rateEstimators.keySet()) {
                     if(dbIdLookupTable.get(sig) == null) {
                         pInsert.setObject(1, sig);
@@ -264,8 +277,8 @@ public class AggregationLevelLookup {
                         batchSizeIns++;
                     } else {
                         SamplingRateEstimation e = rateEstimators.get(sig);
-                        // Also limit the frequency in which single entries are updated
-                        if((now-e.getLastSignificantUpdateTimestamp()) < MIN_DB_UPDATE_WAIT) {
+                        // Only update if there was a change since the last database update
+                        if(!forceUpdate && e.getLastSignificantUpdateTimestamp() < lastDatabaseUpdate) {
                             continue;
                         }
                         pUpdate.setObject(1, e);
@@ -295,6 +308,8 @@ public class AggregationLevelLookup {
                 pUpdate = null;
                 conn.close();
                 conn = null;
+                
+                lastDatabaseUpdate = System.currentTimeMillis();
             } catch(SQLException e) {
                 log.error(e);
             }
@@ -317,6 +332,12 @@ public class AggregationLevelLookup {
             } catch(SQLException e) {
                 log.error(e);
             }
+        }
+    }
+    
+    public void flushEstimationData() {
+        if(isInitialized && useDatabase) {
+            updateDatabase(true);
         }
     }
     
