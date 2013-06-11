@@ -16,9 +16,6 @@
 
 package ch.ethz.vizzly.cache.memory;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
@@ -222,33 +219,5 @@ public class IndexedSignalData {
     public int getHits() {
         return hits;
     }
-
-    public synchronized void writeToFile(String cacheFileDir) {
-        FileOutputStream fos = null;
-        ObjectOutputStream o = null;
-        String fileName = cacheFileDir + this.getFilename();
-        try {
-            fos = new FileOutputStream(fileName); 
-            o = new ObjectOutputStream(fos);
-            o.writeObject(this);
-        } catch(IOException e) {
-            log.error(e);
-        } finally { 
-            try { 
-                if(o != null) {
-                   o.close();
-                }
-                if(fos != null) {
-                    fos.close();
-                }
-                //File f = new File(fileName);
-                //log.debug("Finished writing cached signal to " + fileName 
-                //        + ". Size = " + Long.valueOf(f.length()).toString() + " bytes");
-            } catch (Exception e) { 
-                log.error(e);
-            } 
-        }
-    }
-
 
 }
