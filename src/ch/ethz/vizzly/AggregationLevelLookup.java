@@ -253,7 +253,6 @@ public class AggregationLevelLookup {
     private void updateDatabase(Boolean forceUpdate) {
         synchronized(useDatabase) {
             try {
-                
                 if(!forceUpdate && (System.currentTimeMillis()-lastDatabaseUpdate) < MIN_DB_UPDATE_WAIT) {
                     return;
                 }

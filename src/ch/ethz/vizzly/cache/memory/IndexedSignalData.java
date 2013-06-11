@@ -19,7 +19,6 @@ package ch.ethz.vizzly.cache.memory;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
@@ -29,7 +28,6 @@ import org.apache.log4j.Logger;
 import ch.ethz.vizzly.datatype.VizzlySignal;
 import ch.ethz.vizzly.datatype.readings.TimedLocationValue;
 import ch.ethz.vizzly.datatype.readings.TimedValue;
-import ch.ethz.vizzly.datatype.readings.Value;
 import ch.ethz.vizzly.util.DataAggregationUtil;
 import ch.ethz.vizzly.util.TimestampTruncateUtil;
 
@@ -39,9 +37,9 @@ import ch.ethz.vizzly.util.TimestampTruncateUtil;
  * @author Matthias Keller
  *
  */
-public class IndexedSignalData implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class IndexedSignalData {
+    
+    protected static final double NULL_VALUE = -9999;
 
     protected long indexStartTimeMilli;
     protected int windowLengthSec;
@@ -52,7 +50,7 @@ public class IndexedSignalData implements Serializable {
     protected Long firstPacketTimestamp = null;
     protected Long lastPacketTimestamp = null;
 
-    private Value[] cachedData = null;
+    private double[] cachedData = null;
     private int maxDataIdxUsed;
 
     protected VizzlySignal signal = null;
@@ -74,7 +72,10 @@ public class IndexedSignalData implements Serializable {
 
     public IndexedSignalData(VizzlySignal signal, int size, long firstPacketTimestamp, int windowLengthSec) {
         this(signal, firstPacketTimestamp, windowLengthSec);
-        cachedData = new Value[size];
+        cachedData = new double[size];
+        for(int i = 0; i < size; i++) {
+            cachedData[i] = NULL_VALUE;
+        }
         maxDataIdxUsed = -1;
     }
 
@@ -115,7 +116,7 @@ public class IndexedSignalData implements Serializable {
             TimedValue v = aggregatedData.get(i);
             int idx = getIdx(v.timestamp, false);
             if(idx != -1) {
-                cachedData[idx] = new Value(v.value);
+                cachedData[idx] = v.value;
             } else {
                 log.error("Invalid index " + idx);
             }
@@ -140,8 +141,8 @@ public class IndexedSignalData implements Serializable {
         while(curTime <= endTime) {
             int idx = getIdx(curTime, false);
             if(idx != -1) {
-                if(cachedData[idx] != null && !cachedData[idx].isNull()) {
-                    data.add(new TimedLocationValue(curTime, cachedData[idx].value));
+                if(cachedData[idx] != NULL_VALUE) {
+                    data.add(new TimedLocationValue(curTime, cachedData[idx]));
                 }
 
             }
@@ -155,9 +156,12 @@ public class IndexedSignalData implements Serializable {
         int incr = (int)Math.round(2678400/windowLengthSec);
         int newSize = minSize + ((incr < 10) ? 10 : incr);
         //log.debug("Increasing data array size to " + newSize + ", minSize = " + minSize + ", incr = " + incr);
-        Value[] newData = new Value[newSize];
+        double[] newData = new double[newSize];
         for(int i = 0; i < cachedData.length; i++) {
             newData[i] = cachedData[i];
+        }
+        for(int i = cachedData.length; i < newData.length; i++) {
+            newData[i] = NULL_VALUE;
         }
         cachedData = newData;
     }
