@@ -44,15 +44,15 @@ public class IndexedSignalLocationData extends IndexedSignalData {
     
     private static Logger log = Logger.getLogger(IndexedSignalLocationData.class);
 
-    public IndexedSignalLocationData(VizzlySignal signal, int size, long firstPacketTimestamp, int windowLengthSec) {
-        super(signal, firstPacketTimestamp, windowLengthSec);
-        cachedDataVal = new double[size];
-        cachedDataLat = new double[size];
-        cachedDataLng = new double[size];
+    public IndexedSignalLocationData(VizzlySignal signal, long firstPacketTimestamp, int windowLengthSec) {
+        initMetadata(signal, firstPacketTimestamp, windowLengthSec);
+        cachedDataVal = new double[ARRAY_START_SIZE];
+        cachedDataLat = new double[ARRAY_START_SIZE];
+        cachedDataLng = new double[ARRAY_START_SIZE];
         maxTimeTransIdxUsed = -1;
         nextDataArrayIdx = 0;
-        timeTranslation = new int[size][2];
-        for(int i = 0; i < size; i++) {
+        timeTranslation = new int[ARRAY_START_SIZE][2];
+        for(int i = 0; i < ARRAY_START_SIZE; i++) {
             timeTranslation[i][0] = -1;
             timeTranslation[i][1] = -1;
             cachedDataVal[i] = NULL_VALUE;
@@ -216,7 +216,7 @@ public class IndexedSignalLocationData extends IndexedSignalData {
             newDataLng[i] = cachedDataLng[i];
         }
         for(int i = cachedDataVal.length; i < newDataVal.length; i++) {
-            cachedDataVal[i] = NULL_VALUE;
+            newDataVal[i] = NULL_VALUE;
         }
         cachedDataVal = newDataVal;
         cachedDataLat = newDataLat;

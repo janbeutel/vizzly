@@ -36,7 +36,13 @@ import ch.ethz.vizzly.util.TimestampTruncateUtil;
  */
 public class IndexedSignalData {
     
-    protected static final double NULL_VALUE = -9999;
+    protected final double NULL_VALUE = -9999;
+    
+    /**
+     * We start with a rather small array that will be incremented when needed. This way
+     * we waste less memory.
+     */
+    protected final int ARRAY_START_SIZE = 10000;
 
     protected long indexStartTimeMilli;
     protected int windowLengthSec;
@@ -57,7 +63,18 @@ public class IndexedSignalData {
 
     private static Logger log = Logger.getLogger(IndexedSignalData.class);
 
-    protected IndexedSignalData(VizzlySignal signal, long firstPacketTimestamp, int windowLengthSec) {
+    protected IndexedSignalData() {}
+
+    public IndexedSignalData(VizzlySignal signal, long firstPacketTimestamp, int windowLengthSec) {
+        initMetadata(signal, firstPacketTimestamp, windowLengthSec);
+        cachedData = new double[ARRAY_START_SIZE];
+        for(int i = 0; i < ARRAY_START_SIZE; i++) {
+            cachedData[i] = NULL_VALUE;
+        }
+        maxDataIdxUsed = -1;
+    }
+    
+    protected void initMetadata(VizzlySignal signal, long firstPacketTimestamp, int windowLengthSec) {
         this.signal = signal;
         this.windowLengthSec = windowLengthSec;
         this.firstPacketTimestamp = firstPacketTimestamp;
@@ -66,16 +83,7 @@ public class IndexedSignalData {
         cal = Calendar.getInstance();
         lastUpdate = cal.getTime();
     }
-
-    public IndexedSignalData(VizzlySignal signal, int size, long firstPacketTimestamp, int windowLengthSec) {
-        this(signal, firstPacketTimestamp, windowLengthSec);
-        cachedData = new double[size];
-        for(int i = 0; i < size; i++) {
-            cachedData[i] = NULL_VALUE;
-        }
-        maxDataIdxUsed = -1;
-    }
-
+    
     private int getIdx(long timeMilli, Boolean noLimit) {
         int idx = (int)((timeMilli-indexStartTimeMilli)/windowLengthMilli);
         if(idx < 0) {
