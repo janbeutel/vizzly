@@ -16,7 +16,6 @@
 
 package ch.ethz.vizzly.cache.memory;
 
-import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Vector;
 
@@ -33,26 +32,30 @@ import ch.ethz.vizzly.util.DataAggregationUtil;
  * @author Matthias Keller
  *
  */
-public class IndexedSignalLocationData extends IndexedSignalData implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class IndexedSignalLocationData extends IndexedSignalData {
 
     private int maxTimeTransIdxUsed = 0;
     private int nextDataArrayIdx = 0;
     private int[][] timeTranslation = null;
-    private LocationValue[] cachedData = null;
-  
+    
+    private double[] cachedDataVal = null;
+    private double[] cachedDataLat = null;
+    private double[] cachedDataLng = null;
+    
     private static Logger log = Logger.getLogger(IndexedSignalLocationData.class);
 
     public IndexedSignalLocationData(VizzlySignal signal, int size, long firstPacketTimestamp, int windowLengthSec) {
         super(signal, firstPacketTimestamp, windowLengthSec);
-        cachedData = new LocationValue[size];
+        cachedDataVal = new double[size];
+        cachedDataLat = new double[size];
+        cachedDataLng = new double[size];
         maxTimeTransIdxUsed = -1;
         nextDataArrayIdx = 0;
         timeTranslation = new int[size][2];
         for(int i = 0; i < size; i++) {
             timeTranslation[i][0] = -1;
             timeTranslation[i][1] = -1;
+            cachedDataVal[i] = NULL_VALUE;
         }
     }
 
@@ -115,7 +118,7 @@ public class IndexedSignalLocationData extends IndexedSignalData implements Seri
         }
 
         // Third step: Increase size of data structure, if needed
-        if((nextDataArrayIdx+aggregatedData.size()) > cachedData.length) {
+        if((nextDataArrayIdx+aggregatedData.size()) > cachedDataVal.length) {
             resizeDataArray(nextDataArrayIdx+aggregatedData.size()); 
         }
 
@@ -136,7 +139,9 @@ public class IndexedSignalLocationData extends IndexedSignalData implements Seri
                 timeTranslation[timeTransIdx][0] = nextDataArrayIdx;
             }
 
-            cachedData[nextDataArrayIdx] = new LocationValue(v.value, v.location); 
+            cachedDataVal[nextDataArrayIdx] = v.value;
+            cachedDataLat[nextDataArrayIdx] = v.location.latitude;
+            cachedDataLng[nextDataArrayIdx] = v.location.longitude;
             nextDataArrayIdx++;
             curTimeIdx = timeTransIdx;
         }
@@ -166,7 +171,7 @@ public class IndexedSignalLocationData extends IndexedSignalData implements Seri
                 continue;
             }
             for(int i = startIdx; i <= endIdx; i++) {
-                data.add(new TimedLocationValue(curTime, cachedData[i]));
+                data.add(new TimedLocationValue(curTime, new LocationValue(cachedDataVal[i], cachedDataLat[i], cachedDataLng[i])));
             }
             curTime += getAvgIntervalMilli();
         }
@@ -201,12 +206,21 @@ public class IndexedSignalLocationData extends IndexedSignalData implements Seri
         int incr = (int)Math.round(2678400/windowLengthSec);
         int newSize = minSize + ((incr < 10) ? 10 : incr);
         //log.debug("Increasing data array size to " + newSize + ", minSize = " + minSize + ", incr = " + incr);
-        LocationValue[] newData = new LocationValue[newSize];
+        double[] newDataVal = new double[newSize];
+        double[] newDataLat = new double[newSize];
+        double[] newDataLng = new double[newSize];
 
-        for(int i = 0; i < cachedData.length; i++) {
-            newData[i] = cachedData[i];
+        for(int i = 0; i < cachedDataVal.length; i++) {
+            newDataVal[i] = cachedDataVal[i];
+            newDataLat[i] = cachedDataLat[i];
+            newDataLng[i] = cachedDataLng[i];
         }
-        cachedData = newData;
+        for(int i = cachedDataVal.length; i < newDataVal.length; i++) {
+            cachedDataVal[i] = NULL_VALUE;
+        }
+        cachedDataVal = newDataVal;
+        cachedDataLat = newDataLat;
+        cachedDataLng = newDataLng;
     }
 
     public long getEndTime() {
@@ -214,10 +228,10 @@ public class IndexedSignalLocationData extends IndexedSignalData implements Seri
     }
     
     public int getNumElements() {
-        if(cachedData == null) {
+        if(cachedDataVal == null) {
             return -1;
         }
-        return cachedData.length;
+        return cachedDataVal.length;
     }
 
 }
