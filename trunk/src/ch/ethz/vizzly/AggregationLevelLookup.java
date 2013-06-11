@@ -319,6 +319,8 @@ public class AggregationLevelLookup {
         synchronized(useDatabase) {
             try {
                 Connection conn = ds.getConnection();
+                conn.setAutoCommit(true);
+                
                 PreparedStatement p = conn.prepareStatement("DELETE FROM " + rateEstimatorTable + 
                         " WHERE id = ?");
                 p.setInt(1, dbIdLookupTable.get(signal));
