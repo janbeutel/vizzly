@@ -75,14 +75,11 @@ public class IndexedSignalData {
     }
     
     private int getIdx(long timeMilli, Boolean noLimit) {
-        if(cachedData == null) {
-            return -1;
-        }
         int idx = (int)((timeMilli-indexStartTimeMilli)/windowLengthMilli);
         if(idx < 0) {
             return -1;
         }
-        if(idx > (cachedData.length-1) && !noLimit) {
+        if((cachedData == null || idx > (cachedData.length-1)) && !noLimit) {
             return -1;
         }
         return idx;
@@ -106,7 +103,7 @@ public class IndexedSignalData {
         // Second step: Increase size of data structure, if needed
         int maxIdx = getIdx(aggregatedData.lastElement().timestamp, true);
         if(cachedData == null || maxIdx > cachedData.length-1) {
-            resizeDataArray(maxIdx+1); 
+            createOrResizeDataArray(maxIdx+1); 
         }
 
         // Third step: Add new data
@@ -152,7 +149,7 @@ public class IndexedSignalData {
         return data;
     }
 
-    private void resizeDataArray(int minSize) {
+    private void createOrResizeDataArray(int minSize) {
         // Add space for roughly one more month of data
         int incr = (int)Math.round(2678400/windowLengthSec);
         int newSize = minSize + ((incr < 10) ? 10 : incr);
