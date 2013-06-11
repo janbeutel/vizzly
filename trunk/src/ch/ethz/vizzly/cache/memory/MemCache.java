@@ -84,10 +84,10 @@ public class MemCache extends AbstractCache {
         if(d == null) {
             // Create cache entry
             if(!signal.hasLocation()) {
-                d = new IndexedSignalData(signal, r.size(), r.firstElement().timestamp, windowLengthSec);
+                d = new IndexedSignalData(signal, r.firstElement().timestamp, windowLengthSec);
                 addCacheEntry(signal, windowLengthSec, d);    
             } else {
-                d = new IndexedSignalLocationData(signal, r.size(), r.firstElement().timestamp, windowLengthSec);
+                d = new IndexedSignalLocationData(signal, r.firstElement().timestamp, windowLengthSec);
                 addCacheEntry(signal, windowLengthSec, d);    
             }
         }
