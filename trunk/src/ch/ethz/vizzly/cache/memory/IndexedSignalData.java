@@ -187,17 +187,12 @@ public class IndexedSignalData {
     public String getUniqueIdentifier() {
         return signal.getUniqueIdentifier() + "_" + Integer.toString(windowLengthSec);
     }
-
-    public String getFilename() {
-        return this.getUniqueIdentifier().replace(":", "_").replace(".", "_");
-    }
-
+  
     public int getNumElements() {
         if(cachedData == null) {
             return -1;
         }
-        // Change for seeing how many elements there really are
-        return maxDataIdxUsed; //_data.length;
+        return maxDataIdxUsed;
     }
 
     public Date getLastUpdate() {
