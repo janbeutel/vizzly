@@ -46,27 +46,21 @@ public class IndexedSignalLocationData extends IndexedSignalData {
 
     public IndexedSignalLocationData(VizzlySignal signal, long firstPacketTimestamp, int windowLengthSec) {
         initMetadata(signal, firstPacketTimestamp, windowLengthSec);
-        cachedDataVal = new double[ARRAY_START_SIZE];
-        cachedDataLat = new double[ARRAY_START_SIZE];
-        cachedDataLng = new double[ARRAY_START_SIZE];
         maxTimeTransIdxUsed = -1;
         nextDataArrayIdx = 0;
-        timeTranslation = new int[ARRAY_START_SIZE][2];
-        for(int i = 0; i < ARRAY_START_SIZE; i++) {
-            timeTranslation[i][0] = -1;
-            timeTranslation[i][1] = -1;
-            cachedDataVal[i] = NULL_VALUE;
-        }
     }
 
     private int getTransTimeIdx(long timeMilli, Boolean readOnly) {
+        if(readOnly && timeTranslation == null) {
+            return -1;
+        }
         int idx = (int)((timeMilli-indexStartTimeMilli)/windowLengthMilli);
         if(idx < 0) {
             return -1;
         }
-        if(idx > (timeTranslation.length-1)) {
+        if(timeTranslation == null || idx > (timeTranslation.length-1)) {
             if(!readOnly) {
-                resizeTimeTranslation(idx);
+                createOrResizeTimeTranslation(idx+1);
             } else {
                 return -1;
             }
@@ -75,6 +69,9 @@ public class IndexedSignalLocationData extends IndexedSignalData {
     }
 
     public int getStartIndex(long timeMilli) {
+        if(timeTranslation == null) {
+            return -1;
+        }
         int idx = getTransTimeIdx(timeMilli, true);
         if(idx == -1) {
             return -1;
@@ -83,6 +80,9 @@ public class IndexedSignalLocationData extends IndexedSignalData {
     }
 
     public int getEndIndex(long timeMilli) {
+        if(timeTranslation == null) {
+            return -1;
+        }
         int idx = getTransTimeIdx(timeMilli, true);
         if(idx == -1) {
             return -1;
@@ -94,6 +94,7 @@ public class IndexedSignalLocationData extends IndexedSignalData {
         if(data.size() == 0) {
             return;
         }
+        
         // First step: Pre-aggregate new data
         Vector<TimedLocationValue> aggregatedData = DataAggregationUtil.aggregateDataWithLocation(data, windowLengthSec);
         if(aggregatedData.size() == 0) {
@@ -101,32 +102,32 @@ public class IndexedSignalLocationData extends IndexedSignalData {
             return;
         }
 
+        // timeTranslation != null after getTransTimeIdx()
+        int timeTransIdx = getTransTimeIdx(aggregatedData.get(0).timestamp, false);
+
         // Second step: Clean-up previously filled, overlapping data
-        if(aggregatedData.size() > 0) {
-            int timeTransIdx = getTransTimeIdx(aggregatedData.get(0).timestamp, false);
-            if(timeTransIdx >= 0 && timeTransIdx <= maxTimeTransIdxUsed) {
-                int startIdx = timeTranslation[timeTransIdx][0];
-                if(startIdx != -1) {
-                    //log.debug("Decremented _nextDataArrayIdx from " + _nextDataArrayIdx + " to " + startIdx);
-                    nextDataArrayIdx = startIdx;
-                    for(int i = timeTransIdx; i <= maxTimeTransIdxUsed; i++) {
-                        timeTranslation[i][0] = -1;
-                        timeTranslation[i][1] = -1;
-                    }
+        if(timeTransIdx >= 0 && timeTransIdx <= maxTimeTransIdxUsed) {
+            int startIdx = timeTranslation[timeTransIdx][0];
+            if(startIdx != -1) {
+                //log.debug("Decremented _nextDataArrayIdx from " + _nextDataArrayIdx + " to " + startIdx);
+                nextDataArrayIdx = startIdx;
+                for(int i = timeTransIdx; i <= maxTimeTransIdxUsed; i++) {
+                    timeTranslation[i][0] = -1;
+                    timeTranslation[i][1] = -1;
                 }
             }
         }
 
-        // Third step: Increase size of data structure, if needed
-        if((nextDataArrayIdx+aggregatedData.size()) > cachedDataVal.length) {
-            resizeDataArray(nextDataArrayIdx+aggregatedData.size()); 
+        // Third step: Increase size of data structures, if needed
+        if(cachedDataVal == null || (nextDataArrayIdx+aggregatedData.size()) > cachedDataVal.length-1) {
+            createOrResizeDataArray(nextDataArrayIdx+aggregatedData.size()+1); 
         }
 
         // Fourth step: Add new data
         int curTimeIdx = -1;
         for(int i = 0; i < aggregatedData.size(); i++) {
             TimedLocationValue v = aggregatedData.get(i);
-            int timeTransIdx = getTransTimeIdx(v.timestamp, false);
+            timeTransIdx = getTransTimeIdx(v.timestamp, false);
 
             // First entry
             if(curTimeIdx == -1) {
@@ -154,6 +155,9 @@ public class IndexedSignalLocationData extends IndexedSignalData {
     }
 
     public Vector<TimedLocationValue> getData(Long timeFilterStart, Long timeFilterEnd) {
+        if(lastPacketTimestamp == null) {
+            return null;
+        }
         Vector<TimedLocationValue> data = new Vector<TimedLocationValue>();
         long curTime = (timeFilterStart != null) ? truncateTimestamp(timeFilterStart) : getStartTime();
         long endTime = (timeFilterEnd != null) ? truncateTimestamp(timeFilterEnd) : getEndTime();
@@ -178,7 +182,7 @@ public class IndexedSignalLocationData extends IndexedSignalData {
         return data;
     }
 
-    private void resizeTimeTranslation(int minSize) {
+    private void createOrResizeTimeTranslation(int minSize) {
         // Add space for roughly one more month of data
         int incr = (int)Math.round(2678400/windowLengthSec);
         int newSize = minSize + ((incr < 10) ? 10 : incr); 
@@ -186,22 +190,27 @@ public class IndexedSignalLocationData extends IndexedSignalData {
 
         int[][] newTimeTranslation = new int[newSize][2];
 
-        for(int i = 0; i < timeTranslation.length; i++) {
-            newTimeTranslation[i][0] = timeTranslation[i][0];
-            newTimeTranslation[i][1] = timeTranslation[i][1];
-        }
-
-        if(newTimeTranslation.length > timeTranslation.length) {
+        if(timeTranslation != null) {
+            // Copy data of existing array
+            for(int i = 0; i < timeTranslation.length; i++) {
+                newTimeTranslation[i][0] = timeTranslation[i][0];
+                newTimeTranslation[i][1] = timeTranslation[i][1];
+            }
             for(int i = timeTranslation.length; i < newTimeTranslation.length; i++) {
                 newTimeTranslation[i][0] = -1;
                 newTimeTranslation[i][1] = -1;
             }
+        } else {
+            // Initialize new array with -1
+            for(int i = 0; i < newTimeTranslation.length; i++) {
+                newTimeTranslation[i][0] = -1;
+                newTimeTranslation[i][1] = -1;
+            }
         }
-
         timeTranslation = newTimeTranslation;
     }
 
-    private void resizeDataArray(int minSize) {
+    private void createOrResizeDataArray(int minSize) {
         // Add space for roughly one more month of data
         int incr = (int)Math.round(2678400/windowLengthSec);
         int newSize = minSize + ((incr < 10) ? 10 : incr);
@@ -210,13 +219,21 @@ public class IndexedSignalLocationData extends IndexedSignalData {
         double[] newDataLat = new double[newSize];
         double[] newDataLng = new double[newSize];
 
-        for(int i = 0; i < cachedDataVal.length; i++) {
-            newDataVal[i] = cachedDataVal[i];
-            newDataLat[i] = cachedDataLat[i];
-            newDataLng[i] = cachedDataLng[i];
-        }
-        for(int i = cachedDataVal.length; i < newDataVal.length; i++) {
-            newDataVal[i] = NULL_VALUE;
+        if(cachedDataVal != null) {
+            // Copy data of existing arrays
+            for(int i = 0; i < cachedDataVal.length; i++) {
+                newDataVal[i] = cachedDataVal[i];
+                newDataLat[i] = cachedDataLat[i];
+                newDataLng[i] = cachedDataLng[i];
+            }
+            for(int i = cachedDataVal.length; i < newDataVal.length; i++) {
+                newDataVal[i] = NULL_VALUE;
+            }
+        } else {
+            // Initialization of new data structures
+            for(int i = 0; i < newDataVal.length; i++) {
+                newDataVal[i] = NULL_VALUE;
+            }  
         }
         cachedDataVal = newDataVal;
         cachedDataLat = newDataLat;
