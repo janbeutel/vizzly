@@ -322,7 +322,7 @@ public class AggregationLevelLookup {
                 PreparedStatement p = conn.prepareStatement("DELETE FROM " + rateEstimatorTable + 
                         " WHERE id = ?");
                 p.setInt(1, dbIdLookupTable.get(signal));
-                p.executeQuery();
+                p.executeUpdate();
                 p.close();
                 p = null;
                 conn.close();
