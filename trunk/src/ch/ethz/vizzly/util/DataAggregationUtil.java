@@ -98,7 +98,7 @@ public class DataAggregationUtil {
             ValueAggregate vAgg = locationAgg.get(v.location);
             if(vAgg == null) {
                 vAgg = new ValueAggregate();
-                locationAgg.put(v.location, vAgg);
+                locationAgg.put(DataAggregationUtil.decreaseLocationAccuracy(v.location, 4), vAgg);
             }
             vAgg.addValue(v.value);
             curTime = truncTime;
@@ -111,4 +111,12 @@ public class DataAggregationUtil {
         }
         return aggregatedData;
     }
+
+    public static Location decreaseLocationAccuracy(Location l, int numDecimals) {
+        double div = Math.pow(10, numDecimals);
+        return new Location(
+                (double)Math.round(l.latitude*div)/div,
+                (double)Math.round(l.longitude*div)/div);
+    }
+    
 }
