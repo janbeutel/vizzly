@@ -1,5 +1,24 @@
 <%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,
     java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
+<%
+VizzlyStateContainer vizzlyState = 
+    (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
+CacheManager cacheManager = vizzlyState.getCacheManager();
+
+if ("POST".equalsIgnoreCase(request.getMethod())) {
+    // Process signal removal requests
+    Map<String, String[]> parameters = request.getParameterMap();
+    for(String parameter : parameters.keySet()) {
+        // Quite inefficient right now, but should not be used so often anyways
+        for(VizzlySignal s : cacheManager.getSignals(cacheManager.getNumberOfCaches()-1)) {
+            if(s.getUniqueIdentifier().equals(parameter)) {
+                cacheManager.scheduleSignalForRemoval(s);
+            }   
+        }
+    }
+    response.sendRedirect(request.getRequestURI());
+}
+%>    
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,9 +41,6 @@ td.right { text-align: right; }
 </head>
 <body>
 <%
-VizzlyStateContainer vizzlyState = 
-    (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
-CacheManager cacheManager = vizzlyState.getCacheManager();
 
 // Generate text representation of current uptime
 long uptime = cacheManager.getUptime(cacheManager.getNumberOfCaches()-1);
@@ -94,19 +110,6 @@ for(int i = 0; i < workerSignals.length; i++) {
 </table>
 
 <%
-if ("POST".equalsIgnoreCase(request.getMethod())) {
-    // Process signal removal requests
-    Map<String, String[]> parameters = request.getParameterMap();
-    for(String parameter : parameters.keySet()) {
-        // Quite inefficient right now, but should not be used so often anyways
-        for(VizzlySignal s : cacheManager.getSignals(cacheManager.getNumberOfCaches()-1)) {
-            if(s.getUniqueIdentifier().equals(parameter)) {
-                cacheManager.scheduleSignalForRemoval(s);
-            }   
-        }
-    }
-    response.sendRedirect(request.getRequestURI());
-}
 
 if(cacheManager.getSignalsToRemove().size() > 0) {
 %>
