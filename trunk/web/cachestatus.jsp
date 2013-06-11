@@ -17,6 +17,7 @@ if ("POST".equalsIgnoreCase(request.getMethod())) {
         }
     }
     response.sendRedirect(request.getRequestURI());
+    return;
 }
 %>    
 <!DOCTYPE html>
