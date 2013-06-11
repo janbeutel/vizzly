@@ -37,12 +37,6 @@ import ch.ethz.vizzly.util.TimestampTruncateUtil;
 public class IndexedSignalData {
     
     protected final double NULL_VALUE = -9999;
-    
-    /**
-     * We start with a rather small array that will be incremented when needed. This way
-     * we waste less memory.
-     */
-    protected final int ARRAY_START_SIZE = 10000;
 
     protected long indexStartTimeMilli;
     protected int windowLengthSec;
@@ -59,7 +53,7 @@ public class IndexedSignalData {
     protected VizzlySignal signal = null;
 
     // Count how often the data was accessed
-    protected int hits = 1;
+    protected int hits = 0;
 
     private static Logger log = Logger.getLogger(IndexedSignalData.class);
 
@@ -67,10 +61,6 @@ public class IndexedSignalData {
 
     public IndexedSignalData(VizzlySignal signal, long firstPacketTimestamp, int windowLengthSec) {
         initMetadata(signal, firstPacketTimestamp, windowLengthSec);
-        cachedData = new double[ARRAY_START_SIZE];
-        for(int i = 0; i < ARRAY_START_SIZE; i++) {
-            cachedData[i] = NULL_VALUE;
-        }
         maxDataIdxUsed = -1;
     }
     
@@ -85,6 +75,9 @@ public class IndexedSignalData {
     }
     
     private int getIdx(long timeMilli, Boolean noLimit) {
+        if(cachedData == null) {
+            return -1;
+        }
         int idx = (int)((timeMilli-indexStartTimeMilli)/windowLengthMilli);
         if(idx < 0) {
             return -1;
@@ -112,8 +105,8 @@ public class IndexedSignalData {
         
         // Second step: Increase size of data structure, if needed
         int maxIdx = getIdx(aggregatedData.lastElement().timestamp, true);
-        if(maxIdx > cachedData.length) {
-            resizeDataArray(maxIdx); 
+        if(cachedData == null || maxIdx > cachedData.length-1) {
+            resizeDataArray(maxIdx+1); 
         }
 
         // Third step: Add new data
@@ -134,6 +127,9 @@ public class IndexedSignalData {
     }
 
     public Vector<TimedLocationValue> getData(Long timeFilterStart, Long timeFilterEnd) {
+        if(lastPacketTimestamp == null) {
+            return null;
+        }
         Vector<TimedLocationValue> data = new Vector<TimedLocationValue>();
         long curTime = (timeFilterStart != null) ? truncateTimestamp(timeFilterStart) : getStartTime();
         long endTime = (timeFilterEnd != null) ? truncateTimestamp(timeFilterEnd) : getEndTime();
@@ -162,11 +158,19 @@ public class IndexedSignalData {
         int newSize = minSize + ((incr < 10) ? 10 : incr);
         //log.debug("Increasing data array size to " + newSize + ", minSize = " + minSize + ", incr = " + incr);
         double[] newData = new double[newSize];
-        for(int i = 0; i < cachedData.length; i++) {
-            newData[i] = cachedData[i];
-        }
-        for(int i = cachedData.length; i < newData.length; i++) {
-            newData[i] = NULL_VALUE;
+        if(cachedData != null) {
+            // Copy values of already existing array
+            for(int i = 0; i < cachedData.length; i++) {
+                newData[i] = cachedData[i];
+            }
+            for(int i = cachedData.length; i < newData.length; i++) {
+                newData[i] = NULL_VALUE;
+            }
+        } else {
+            // Just initialize everything with NULL_VALUE
+            for(int i = 0; i < newData.length; i++) {
+                newData[i] = NULL_VALUE;
+            }
         }
         cachedData = newData;
     }

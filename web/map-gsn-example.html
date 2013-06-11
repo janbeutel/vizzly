@@ -5,11 +5,12 @@
     <link rel="stylesheet" type="text/css" href="vizzly.min.css" />
     <link rel="stylesheet" type="text/css" href="extlib/jquery-ui-1.8.20.custom.css" />
     <style type="text/css">
-    body { font-family: Verdana, Helvetica, sans-serif; font-size:12px; }
+    html { height: 100% }
+    body { font-family: Verdana, Helvetica, sans-serif; font-size:12px; height: 100%; }
     h1 { font-family: Verdana, Helvetica, sans-serif; font-size:16px; }
     </style>
     <!--[if IE]><script src="extlib/excanvas.js"></script><![endif]-->
-    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
     <script type='text/javascript' src='extlib/jquery-1.7.2.min.js'></script>
     <script type='text/javascript' src='extlib/jquery-ui-1.8.20.custom.min.js'></script>
     <script type='text/javascript' src='extlib/jquery.ui.touch-punch.min.js'></script>
@@ -31,10 +32,10 @@
             "mapCenter": new google.maps.LatLng(47.379022, 8.541001),
             "signals": [
             {
-                "displayName": "Particular matter",
-                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_minidisc_emb__mapped" },
-                "dataField": "number",
-                "deviceSelect": { "type": "all" },
+                "displayName": "Ozone [ppb]",
+                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
+                "dataField": "ozone_ppb",
+                "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
                 "timeField": "generation_time",
                 "scaling": 1.0,
                 "visible": true,
@@ -43,9 +44,9 @@
                 "thresholds": [ 18.0, 8.0 ]
             },
             {
-                "displayName": "Ozone [ppb]",
-                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_oz47_instant_calibrated" },
-                "dataField": "ozone_ppb",
+                "displayName": "Particular matter",
+                "dataSource": { "type": "gsn", "serverAddress": "data.opensense.ethz.ch", "name": "opensense_minidisc_emb__mapped" },
+                "dataField": "number",
                 "deviceSelect": { "type": "single", "field": "device_id", "value": 3 },
                 "timeField": "generation_time",
                 "scaling": 1.0,
