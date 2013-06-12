@@ -549,7 +549,7 @@ public class SqlDbCache extends AbstractCache {
             }
             
             synchronized(seenSignalsEntryIds) {
-               if(seenSignalsEntryIds.contains(signal)) {
+               if(seenSignalsEntryIds.containsKey(signal)) {
                    signalId = seenSignalsEntryIds.get(signal);
                    seenSignalsEntryIds.remove(signal);
                } else {
@@ -568,6 +568,11 @@ public class SqlDbCache extends AbstractCache {
 
             Connection conn = ds.getConnection();
             PreparedStatement p = conn.prepareStatement("DELETE FROM " + cacheMetaDataTable + " WHERE signal_id = ?");
+            p.setInt(1, signalId);
+            p.executeUpdate();
+            p.close();
+            
+            p = conn.prepareStatement("DELETE FROM " + signalsDbTable + " WHERE signal_id = ?");
             p.setInt(1, signalId);
             p.executeUpdate();
             p.close();
