@@ -70,6 +70,7 @@ public class CacheUpdateWorkerThread extends Thread {
                         }
                         log.info("Removing a signal from the cache.");
                         cache.performSignalRemoval(nextRemoval);
+                        workerSync.signalWorkerFinished(workerId);
                     }
                 }
 
