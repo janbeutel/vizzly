@@ -1,6 +1,5 @@
 <%@ page import="ch.ethz.vizzly.VizzlyStateContainer,ch.ethz.vizzly.cache.*,ch.ethz.vizzly.datatype.*,
-    java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %>
-<%
+    java.util.*,java.text.SimpleDateFormat,java.text.DecimalFormat,java.lang.StringBuffer" %><%
 VizzlyStateContainer vizzlyState = 
     (VizzlyStateContainer)application.getAttribute(VizzlyStateContainer.SERVLET_ATTRIB_KEY);
 CacheManager cacheManager = vizzlyState.getCacheManager();
@@ -19,8 +18,7 @@ if ("POST".equalsIgnoreCase(request.getMethod())) {
     response.sendRedirect(request.getRequestURI());
     return;
 }
-%>    
-<!DOCTYPE html>
+%><!DOCTYPE html>
 <html lang="en">
 <head>
 <title>Vizzly Cache Status</title>
@@ -73,6 +71,7 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 <tr><td><%=cacheManager.getCacheDescription(i)%> # of Requests:</td><td><%=cacheManager.getNumberOfCacheRequests(i)%></tr>
 <tr><td><%=cacheManager.getCacheDescription(i)%> # of Hits:</td><td><%=cacheManager.getNumberOfCacheHits(i)%></tr>
 <tr><td><%=cacheManager.getCacheDescription(i)%> # of Misses:</td><td><%=cacheManager.getNumberOfCacheMisses(i)%></tr>
+<tr><td><a href="#contents-<%=i%>"><%=cacheManager.getCacheDescription(i)%> Cache Contents</a></tr>
 <%
 }
 %>
@@ -152,7 +151,7 @@ SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
 for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 %>
-<h3><%=cacheManager.getCacheDescription(i)%> Cache Contents</h3>
+<h3><a id="contents-<%=i%>"><%=cacheManager.getCacheDescription(i)%> Cache Contents</a></h3>
 <form method="POST">
 <table style="border: 1px solid #000000;">
 <tr style="background-color: #000000; color: #ffffff; font-weight: bold">
