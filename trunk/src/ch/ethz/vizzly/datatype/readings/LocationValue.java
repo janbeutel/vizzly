@@ -24,8 +24,6 @@ package ch.ethz.vizzly.datatype.readings;
  */
 public class LocationValue extends Value {
 
-    static final long serialVersionUID = 1L;
-    
     public Location location;
     
     /* Derived from com.google.visualization.datasource.datatable.value.NumberValue */

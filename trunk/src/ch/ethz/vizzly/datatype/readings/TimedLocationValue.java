@@ -23,8 +23,6 @@ package ch.ethz.vizzly.datatype.readings;
  *
  */
 public class TimedLocationValue extends LocationValue {
-
-    private static final long serialVersionUID = 1L;
     
     public long timestamp;
     
