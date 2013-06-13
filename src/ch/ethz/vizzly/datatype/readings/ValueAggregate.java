@@ -24,9 +24,7 @@ import java.io.Serializable;
  * @author Matthias Keller
  *
  */
-public class ValueAggregate implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class ValueAggregate {
 
     protected double aggSum;
     

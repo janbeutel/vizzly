@@ -23,9 +23,7 @@ package ch.ethz.vizzly.datatype.readings;
  *
  */
 public class TimedValue extends Value {
-
-    private static final long serialVersionUID = 1L;
-    
+ 
     public long timestamp;
     
     public TimedValue() {

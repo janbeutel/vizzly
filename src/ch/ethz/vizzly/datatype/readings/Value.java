@@ -23,9 +23,7 @@ import java.io.Serializable;
  * @author Matthias Keller
  *
  */
-public class Value implements Serializable {
-
-    static final long serialVersionUID = 1L;
+public class Value {
     
     public double value;
     

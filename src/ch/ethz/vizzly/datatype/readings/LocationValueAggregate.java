@@ -23,8 +23,6 @@ package ch.ethz.vizzly.datatype.readings;
  *
  */
 public class LocationValueAggregate extends ValueAggregate {
-
-    private static final long serialVersionUID = 1L;
     
     private Location location = null;
     
