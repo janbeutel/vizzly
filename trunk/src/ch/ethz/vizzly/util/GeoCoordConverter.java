@@ -25,15 +25,13 @@ package ch.ethz.vizzly.util;
 public class GeoCoordConverter {
 
     static public double convertLongitude(double lon) {
-        double absdlon = Math.abs(Math.round(Math.round(lon/100) * 1000000.));
-        double absmlon = Math.abs(Math.round((lon-absdlon/10000) * 1000000.));
-        return (absdlon + (absmlon/60.)) * 1/1000000;
+    	double lonConv = Math.floor(lon/100)+(lon-Math.floor(lon/100)*100)/60;
+    	return lonConv;
     }
     
     static public double convertLatitude(double lat) {
-        double absdlat = Math.abs(Math.round(Math.round(lat/100) * 1000000.));
-        double absmlat = Math.abs(Math.round((lat-absdlat/10000) * 1000000.));
-        return (absdlat + (absmlat/60.)) * 1/1000000;
+    	double latConv = Math.floor(lat/100)+(lat-Math.floor(lat/100)*100)/60;
+    	return latConv;
     }
     
 }
