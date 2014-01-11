@@ -17,9 +17,12 @@
 package ch.ethz.vizzly;
 
 import java.io.StringWriter;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
@@ -37,8 +40,6 @@ import ch.ethz.vizzly.performance.DataFetchPerformanceMeasurement.DataBackend;
 import ch.ethz.vizzly.performance.UserRequestPerformanceMeasurement;
 import ch.ethz.vizzly.util.LocationAggregationGrid;
 import ch.ethz.vizzly.util.LocationFilter;
-
-import com.ibm.icu.text.DecimalFormat;
 
 /**
  * This class generates the CSV outputs that are then sent to a client.
@@ -214,8 +215,9 @@ public class CsvOutputGenerator {
         //viewEndTime = (viewEndTime > cal.getTimeInMillis()) ? cal.getTimeInMillis() : viewEndTime;
         csvOutput.write("# " + Long.toString(viewStartTime) + ", " + Long.toString(viewEndTime) + "\n");
 
-        DecimalFormat df = new DecimalFormat("#.###");
-
+        DecimalFormat df = (DecimalFormat)NumberFormat.getInstance(Locale.US);
+        df.applyPattern("#.###");
+        
         int returnedLines = 0;
         // Output aggregated data first
         if(valuesAreAggregated.contains(true)) {
@@ -375,7 +377,8 @@ public class CsvOutputGenerator {
                 + ", " + Integer.toString(numMapGridRows) + ", " + Integer.toString(numMapGridCols) + "\n");
 
         int returnedLines = 0;
-        DecimalFormat df = new DecimalFormat("#.#");
+        DecimalFormat df = (DecimalFormat)NumberFormat.getInstance(Locale.US);
+        df.applyPattern("#.#");
         LocationValueAggregate[] aggMap = grid.getAggregatedData();
         for(int i = 0; i < aggMap.length; i++) {
             if(aggMap[i] == null) {
