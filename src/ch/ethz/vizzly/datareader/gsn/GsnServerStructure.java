@@ -66,13 +66,13 @@ public class GsnServerStructure {
         GsnServerStructure structure = new GsnServerStructure();
         try {
 
-            log.debug("Fetching GSN structure from " + serverSpec.serverIp.getHostAddress() + ":" 
+            log.debug("Fetching GSN structure from " + serverSpec.serverIp.getHostName() + ":" 
                     + Integer.valueOf(serverSpec.serverPort).toString());
             
             DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
 
-            Document doc = docBuilder.parse("http://" + serverSpec.serverIp.getHostAddress() + ":" 
+            Document doc = docBuilder.parse("http://" + serverSpec.serverIp.getHostName() + ":" 
                     + Integer.valueOf(serverSpec.serverPort).toString() + "/gsn?structure");
 
             // normalize text representation
