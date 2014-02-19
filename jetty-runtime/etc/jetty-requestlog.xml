@@ -23,6 +23,7 @@
 		<Set name="extended">false</Set>
 		<Set name="logCookies">false</Set>
 		<Set name="LogTimeZone">GMT</Set>
+		<Set name="PreferProxiedForAddress">true</Set>
 	      </New>
 	    </Set>
 	  </New>
