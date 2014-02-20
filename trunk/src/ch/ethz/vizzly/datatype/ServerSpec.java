@@ -66,7 +66,7 @@ public class ServerSpec {
         if(!(other instanceof ServerSpec)) return false;
         
         ServerSpec otherSpec = (ServerSpec)other;
-        return serverIp.equals(otherSpec.serverIp) && addressString.compareToIgnoreCase(addressString) == 0 && serverPort == otherSpec.serverPort;
+        return serverIp.equals(otherSpec.serverIp) && addressString.compareToIgnoreCase(otherSpec.addressString) == 0 && serverPort == otherSpec.serverPort;
     }
     
     public int hashCode() {
