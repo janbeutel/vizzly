@@ -30,15 +30,17 @@ public class ServerSpec {
     
     public InetAddress serverIp;
     public int serverPort;
+    private String addressString;
     
     /**
      * Log.
      */
     private static Logger log = Logger.getLogger(ServerSpec.class);
     
-    public ServerSpec(InetAddress serverIp, int serverPort) {
+    public ServerSpec(InetAddress serverIp, int serverPort, String address) {
         this.serverIp = serverIp;
         this.serverPort = serverPort;
+        this.addressString = address;
     }
     
     public static ServerSpec fromAddress(String address)  throws VizzlyException {
@@ -52,7 +54,7 @@ public class ServerSpec {
             } else {
                 serverIp = InetAddress.getByName(address);
             }
-            return new ServerSpec(serverIp, serverPort);
+            return new ServerSpec(serverIp, serverPort, address);
         } catch(UnknownHostException e) {
             log.error("Host not found: "+address);
             throw new VizzlyException("Unknown host: "+address);
@@ -64,7 +66,7 @@ public class ServerSpec {
         if(!(other instanceof ServerSpec)) return false;
         
         ServerSpec otherSpec = (ServerSpec)other;
-        return serverIp.equals(otherSpec.serverIp) && serverPort == otherSpec.serverPort;
+        return serverIp.equals(otherSpec.serverIp) && addressString.compareToIgnoreCase(addressString) == 0 && serverPort == otherSpec.serverPort;
     }
     
     public int hashCode() {
