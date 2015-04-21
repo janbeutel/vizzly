@@ -149,11 +149,18 @@ if(request.getParameter("s") == null || request.getParameter("s").equals("NAME")
 
 SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
+%>
+<div style="padding-top: 40px">
+Table filter: <input type="text" id="FilterTextBox" name="FilterTextBox" />
+<img id="FilterButton" src="./images/button_go.png" alt="filter" />
+</div>
+<%
+
 for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 %>
 <h3><a id="contents-<%=i%>"><%=cacheManager.getCacheDescription(i)%> Cache Contents</a></h3>
 <form method="POST">
-<table style="border: 1px solid #000000;">
+<table class="filterable" style="border: 1px solid #000000;">
 <tr style="background-color: #000000; color: #ffffff; font-weight: bold">
     <td>DEL</td>
     <td><a class="white" href="?s=NAME">SIGNAL NAME</a></td>
@@ -179,7 +186,7 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 <%
     if(!cacheManager.getSignalsToRemove().contains(d.signal)) {
 %>
-    <td><input type="checkbox" id="check_<%=i%>_<%=signalIdx%>" name="<%=d.signal.getUniqueIdentifier()%>" /></td>
+    <td><input type="checkbox" class="chkbox" id="check_<%=i%>_<%=signalIdx%>" name="<%=d.signal.getUniqueIdentifier()%>" /></td>
 <% } else { %>
     <td><img src="./images/drop-locked.png" width="16" height="16" alt="Removal pending" title="Removal pending" /></td>
 <% } %>
@@ -209,19 +216,94 @@ for(int i = 0; i < cacheManager.getNumberOfCaches(); i++) {
 Vizzly is free open-source software: <a href="https://code.google.com/p/vizzly">https://code.google.com/p/vizzly</a><br/>
 </div>
 <script type='text/javascript'>
-$("tr.signalrow").mouseover(function() {
-    $(this).css('background-color', '#77FF99');
-}).mouseout(function() {
-    var rowName = 'check_' + $(this).attr('id').substr(4, $(this).attr('id').len);
-    if(!$("#" + rowName).prop('checked')) {
-          $(this).css('background-color', 'transparent');
-    }
-}).click(function(e) {
-    var rowName = 'check_' + $(this).attr('id').substr(4, $(this).attr('id').len);
-    // The following line checks if the checkbox itself or the table row has been clicked
-    if($(e.target).closest('input[type="checkbox"]').length == 0) {
-        $("#" + rowName).prop('checked', !$("#" + rowName).prop('checked'));
-}});
+var lastChecked = null;
+
+function filterTable() {
+    var s = $("#FilterTextBox").val().toLowerCase().split(" ");
+    //show all rows.
+    $(".filterable tr:hidden").show();
+    $.each(s, function(){
+	$(".filterable tr:visible .indexColumn:not(:contains('"
+	    + this + "'))").parent().hide();
+    });
+}
+
+$(document).ready(function() {
+    var $signalrows = $("tr.signalrow");
+    
+    $("#FilterTextBox").val('');
+    
+    $signalrows.each(function(){
+	if($('.chkbox', this).prop('checked')) {
+	      $(this).css('background-color', '#77FF99');
+	}
+    });
+    
+    $signalrows.click(function(e) {
+	// The following line checks if the checkbox itself or the table row has been clicked
+	if($(e.target).closest('input[type="checkbox"]').length == 0) {
+	    $('.chkbox', this).prop('checked', !$('.chkbox', this).prop('checked'));
+	};
+	
+	if(!lastChecked) {
+	    lastChecked = this;
+	    return;
+	}
+
+	if(e.shiftKey) {
+	    var start = $signalrows.index(this);
+	    var end = $signalrows.index(lastChecked);
+	    
+	    $signalrows.slice(Math.min(start,end), Math.max(start,end)+ 1).each(function(){
+		if ($(this).is(':visible')) {
+		    $('.chkbox', this).prop('checked', $('.chkbox', lastChecked).prop('checked'));
+		    if ($('.chkbox', lastChecked).prop('checked'))
+			$(this).css('background-color', '#77FF99');
+		    else
+			$(this).css('background-color', 'transparent');
+		}
+	    });
+
+	}
+
+	lastChecked = this;
+    });
+    $signalrows.mouseover(function() {
+	$(this).css('background-color', '#77FF99');
+    });
+    $signalrows.mouseout(function() {
+	if(!$('.chkbox', this).prop('checked')) {
+	      $(this).css('background-color', 'transparent');
+	}
+    });
+    
+    //add index column with all content.
+    $(".filterable tr:has(td)").each(function(){
+	var t = $(this).text().toLowerCase();
+	$("<td class='indexColumn'></td>")
+	  .hide().text(t).appendTo(this);
+    });
+    $("#FilterButton").mousedown(function(){
+	$(this).attr("src", "./images/ajax-loader.gif");
+    });
+    $("#FilterButton").click(function(){
+	filterTable();
+	$(this).attr("src", "./images/button_go.png");
+    });
+    $("#FilterTextBox").keydown(function(e) {
+	//check for enter
+	if(e.keyCode == 13)
+	    $("#FilterButton").attr("src", "./images/ajax-loader.gif");
+    });
+    $("#FilterTextBox").keyup(function(e) {
+	//check for enter
+	if(e.keyCode == 13) {
+	    filterTable();
+	    $("#FilterButton").attr("src", "./images/button_go.png");
+	}
+    });
+});
+
 </script>
 </body>
 </html>
